@@ -32,6 +32,7 @@
 .logo-group {
     display: flex;
     align-items: center;
+    cursor: pointer;
   }
 
 .logo-image {
@@ -60,6 +61,7 @@
     font-weight: 500;
     color: #355fb5;
     font-family: 'Open-Sans', sans-serif;
+    cursor: default;
 }
   
 .logout-btn {
@@ -76,5 +78,5 @@
 }
   
 .logout-btn:hover {
-    background-color: #e3f2fd;
+    background-color: #355fb5;
 }
