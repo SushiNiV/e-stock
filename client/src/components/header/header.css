@@ -1,0 +1,80 @@
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #ebe8df;
+    color: white;
+    padding: 5px 24px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.65);
+    height: 3rem;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;  
+    gap: 16px;          
+}
+
+.menu-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    color: #355fb5;
+}
+
+.menu-icon {
+    font-size: 1.95em;
+}
+
+.logo-group {
+    display: flex;
+    align-items: center;
+  }
+
+.logo-image {
+    height: 45px;
+    width: auto;
+    margin: 0 8px;
+}
+  
+.logo {
+    font-size: 1.5rem;
+    font-weight: 600;
+    font-family: 'Poppins', sans-serif;
+}
+
+.logo .e {
+    color: #355fb5;
+}
+
+.logo .s {
+    color: #238998;
+}
+  
+.user-info {
+    margin-right: 16px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #355fb5;
+    font-family: 'Open-Sans', sans-serif;
+}
+  
+.logout-btn {
+    padding: 6px 12px;
+    background-color: #238998;
+    color: #edeae1;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: bold;
+    font-family: 'Open-Sans', sans-serif;
+    transition: background-color 0.2s ease;
+}
+  
+.logout-btn:hover {
+    background-color: #e3f2fd;
+}
