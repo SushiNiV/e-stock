@@ -1,3 +1,18 @@
 html, body {
   background-color: #fff;
 }
+
+.layout {
+  display: flex;
+  transition: all 0.3s ease;
+}
+
+.menu-open .main-area {
+  margin-left: 250px; /* same as menu width */
+  transition: all 0.3s ease;
+}
+
+.main-area {
+  width: 100%;
+  transition: margin-left 0.3s ease;
+}
