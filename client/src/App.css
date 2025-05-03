@@ -4,15 +4,16 @@ html, body {
 
 .layout {
   display: flex;
-  transition: all 0.3s ease;
+  height: 100vh;
 }
 
-.menu-open .main-area {
-  margin-left: 250px; /* same as menu width */
-  transition: all 0.3s ease;
+.sidebar {
+  width: 275px;
+  flex-shrink: 0;
 }
 
 .main-area {
-  width: 100%;
-  transition: margin-left 0.3s ease;
+  flex-grow: 1;
+  padding: 20px;
+  overflow-y: auto;
 }
