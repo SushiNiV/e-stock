@@ -9,10 +9,10 @@ function Login() {
   return (
     <div className="login-wrapper">
       <div className="login-bg-mask"></div>
+      <img src="/assets/store.png" alt="Store" className="store-overlay" />
       <div className="login-content-wrapper">
-        <div className="login-container grid">
+                <div className="login-container grid">
 
-          {/* Login Form */}
           <div className="login-box">
             <h1 className="login-title">Log in to your account.</h1>
             <div className="login-form-wrapper">

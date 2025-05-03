@@ -62,11 +62,19 @@ img {
   right: 0;
   width: 100%;
   height: 100%;
-  background-image: url('../../assets/bg-img.jpg');
-  background-size: cover;
-  background-position: center;
+  background-color: #f6d884; 
   clip-path: circle(50% at 100% 50%);
   z-index: 0;
+}
+
+.store-overlay {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translate(0%, -50%);
+  height: 80vh;
+  z-index: 1; 
+  pointer-events: none; 
 }
 
 .login-content-wrapper {
@@ -261,22 +269,53 @@ img {
 }
 
 /*=============== BREAKPOINTS ===============*/
-@media screen and (max-width: 320px) {
+@media screen and (max-width: 1199px) {
   .container {
     margin-inline: 1rem;
   }
-}
 
-@media screen and (min-width: 540px) {
+  .login-bg-mask,
+  .store-overlay {
+    display: none;
+  }
+
+  .login-content-wrapper {
+    transform: none;
+    padding-inline: 1rem;
+    margin: 0 10% 0 10%;
+  }
+
+  .login-title {
+    font-size: 22px;
+    text-align: center;
+  }
+
   .login-form-wrapper {
-    width: 380px;
-    margin-inline: auto;
+    width: 100%;
+  }
+
+  .login-btn {
+    padding-block: 1rem;
+  }
+
+  .form-input {
+    padding: 1rem 2.5rem 1rem 1.25rem;
   }
 }
 
-@media screen and (min-width: 1150px) {
+/* Screens 1200px and up */
+@media screen and (min-width: 1200px) {
   .container {
     margin-inline: auto;
+  }
+
+  .login-bg-mask,
+  .store-overlay {
+    display: block;
+  }
+
+  .login-content-wrapper {
+    transform: translateX(10%);
   }
 
   .login-form-wrapper {
