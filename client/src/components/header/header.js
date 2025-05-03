@@ -7,9 +7,6 @@ function Header({ onMenuClick }) {
   return (
     <header className="app-header">
       <div className="header-left">
-        <button className="menu-btn" onClick={onMenuClick}>
-          <FontAwesomeIcon icon={faBars} className="menu-icon" />
-        </button>
         <div className="logo-group">
           <img src="/es-logo-trnsc.png" alt="EaseStock Logo" className="logo-image" />
           <h1 className="logo">
