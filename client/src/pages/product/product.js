@@ -1,62 +1,148 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
 import './product.css';
 
-function Products() {
+function Products({ showOverlay }) {
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [editProduct, setEditProduct] = useState(null); // For editing product
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+
+  const token = localStorage.getItem('token');
+
+  const fetchCategories = useCallback(async () => {
+    try {
+      const res = await fetch('http://localhost:3003/categories', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      setCategories(data);
+    } catch (err) {
+      setCategories([]);
+    }
+  }, [token]);
+
+  const fetchProducts = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    fetch('http://localhost:3004/products', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        const formatted = data.map((item) => {
+          const category = categories.find((cat) => cat.CategoryID === item.CategoryID);
+          return {
+            id: item.ProductID,
+            code: item.ProductCode,
+            name: item.ProductName,
+            category: category ? category.CategoryName : 'N/A',
+            unitPrice: item.UnitPrice ?? 0,
+            salePrice: item.SalePrice ?? 0,
+            stock: item.QuantityInStock ?? 0,
+            reorderLevel: item.ReorderLevel ?? 0,
+          };
+        }).sort((a, b) => a.name.localeCompare(b.name)); 
+        setProducts(formatted);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError('Failed to load products. Please try again later.');
+        setLoading(false);
+      });
+  }, [token, categories]);
 
   useEffect(() => {
-    // Generate 20 example products
-    const fakeProducts = Array.from({ length: 20 }, (_, i) => ({
-      id: i + 1,
-      code: `P${(i + 1).toString().padStart(3, '0')}`,
-      name: `Product ${String.fromCharCode(65 + (i % 26))}`,
-      category: ['Electronics', 'Books', 'Clothing', 'Home'][i % 4],
-      unitPrice: 10 + i * 2,
-      salePrice: 12 + i * 2,
-      stock: 30 + i * 5,
-    }));
+    if (token) fetchCategories();
+  }, [token, fetchCategories]);
 
-    setTimeout(() => {
-      setProducts(fakeProducts);
-      setLoading(false);
-    }, 500);
-  }, []);
+  useEffect(() => {
+    if (categories.length) fetchProducts();
+  }, [categories, fetchProducts]);
 
-  const filteredProducts = products.filter(prod =>
-    prod.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    prod.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    prod.category.toLowerCase().includes(searchTerm.toLowerCase())
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const handleDelete = (productId) => {
+    if (window.confirm('Are you sure you want to delete this product?')) {
+      fetch(`http://localhost:3004/products/${productId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) fetchProducts();
+        });
+    }
+  };
+
+  const handleEditProduct = (productId) => {
+    const prod = products.find((p) => p.id === productId);
+    const productToEdit = {
+      ProductID: prod.id,
+      ProductCode: prod.code,
+      ProductName: prod.name,
+      CategoryName: prod.category,
+      UnitPrice: prod.unitPrice,
+      SalePrice: prod.salePrice,
+      QuantityInStock: prod.stock,
+      ReorderLevel: prod.reorderLevel,
+      CategoryID: categories.find(cat => cat.CategoryName === prod.category)?.CategoryID || null
+    };
+  
+    const handleUpdated = (updatedProduct) => {
+      handleProductUpdated(updatedProduct);
+      fetchProducts(); 
+    };
+  
+    showOverlay(handleUpdated, 'edit-product', null, productToEdit);
+  };
+
+  const handleProductUpdated = (updatedProduct) => {
+    if (!updatedProduct || !updatedProduct.ProductID) return;
+  
+    setProducts((prev) =>
+      prev.map((p) =>
+        p.id === updatedProduct.ProductID
+          ? {
+              ...p,
+              name: updatedProduct.ProductName,
+              unitPrice: updatedProduct.UnitPrice,
+              salePrice: updatedProduct.SalePrice,
+              stock: updatedProduct.QuantityInStock,
+              reorderLevel: updatedProduct.ReorderLevel,
+              category: updatedProduct.CategoryName
+            }
+          : p
+      )
+    );
+  };
+
+  const filteredProducts = products.filter(
+    (prod) =>
+      prod?.name?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+      prod?.code?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+      prod?.category?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
   );
 
-  // Handle delete action
-  const handleDelete = (id) => {
-    const updatedProducts = products.filter(prod => prod.id !== id);
-    setProducts(updatedProducts);
-  };
-
-  // Handle edit action
-  const handleEdit = (prod) => {
-    setEditProduct(prod); // Show product details for editing (you can later create an edit form)
-    alert(`Edit Product: ${prod.name}`);
-  };
+  const sortedProducts = filteredProducts.sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <div className="products-page">
       <h2>Products</h2>
-
       <div className="search-add-container">
         <input
           type="text"
           placeholder="Search by name, code, or category"
           value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
+          onChange={(e) => setSearchTerm(e.target.value)}
           className="search-box"
         />
-        <button className="add-button">
+        <button className="add-button" onClick={() => showOverlay(fetchProducts, 'product')}>
           <FaPlus style={{ marginRight: '8px' }} />
           Add
         </button>
@@ -64,6 +150,8 @@ function Products() {
 
       {loading ? (
         <p>Loading products...</p>
+      ) : error ? (
+        <p style={{ color: 'red' }}>{error}</p>
       ) : (
         <div className="table-container">
           <table className="products-table">
@@ -76,35 +164,35 @@ function Products() {
                 <th>Unit Price</th>
                 <th>Sale Price</th>
                 <th>Stock</th>
-                <th>Actions</th> {/* New column for Edit and Delete */}
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredProducts.map((prod, index) => (
-                <tr key={prod.id}>
-                  <td>{index + 1}</td>
-                  <td>{prod.code}</td>
-                  <td>{prod.name}</td>
-                  <td>{prod.category}</td>
-                  <td>${prod.unitPrice.toFixed(2)}</td>
-                  <td>${prod.salePrice.toFixed(2)}</td>
-                  <td>{prod.stock}</td>
-                  <td>
-                    <button
-                      onClick={() => handleEdit(prod)}
-                      className="edit-button"
-                    >
-                      <FaEdit /> Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(prod.id)}
-                      className="delete-button"
-                    >
-                      <FaTrash /> Delete
-                    </button>
-                  </td>
+              {sortedProducts.length === 0 ? (
+                <tr>
+                  <td colSpan="8" style={{ textAlign: 'center' }}>No products found.</td>
                 </tr>
-              ))}
+              ) : (
+                sortedProducts.map((prod, index) => (
+                  <tr key={prod.id}>
+                    <td>{index + 1}</td>
+                    <td>{prod.code}</td>
+                    <td>{prod.name}</td>
+                    <td>{prod.category}</td>
+                    <td>₱{!isNaN(prod.unitPrice) ? Number(prod.unitPrice).toFixed(2) : '0.00'}</td>
+                    <td>₱{!isNaN(prod.salePrice) ? Number(prod.salePrice).toFixed(2) : '0.00'}</td>
+                    <td>{prod.stock}</td>
+                    <td>
+                      <button onClick={() => handleEditProduct(prod.id)} className="edit-button">
+                        <FaEdit /> Edit
+                      </button>
+                      <button onClick={() => handleDelete(prod.id)} className="delete-button">
+                        <FaTrash /> Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
