@@ -1,60 +1,28 @@
-import React, { useEffect, useState } from 'react';
-import './dashboard.css'; // Optional: create this CSS file for styling
+import React from 'react';
 
-function Dashboard() {
-  const [stats, setStats] = useState({
-    totalSales: 0,
-    totalProducts: 0,
-    totalCustomers: 0,
-    lowStock: 0,
-  });
-
-  useEffect(() => {
-    // Replace with real API/data fetching logic
-    // This is just mock data
-    setStats({
-      totalSales: 1250.75,
-      totalProducts: 230,
-      totalCustomers: 57,
-      lowStock: 8,
-    });
-  }, []);
-
+const Placeholder = ({ title }) => {
   return (
-    <div className="dashboard">
-      <h2 className="dashboard-title">Dashboard Overview</h2>
-      <div className="dashboard-cards">
-        <div className="dashboard-card">
-          <span className="material-symbols-sharp">shopping_cart</span>
-          <div>
-            <p>Total Sales</p>
-            <h3>${stats.totalSales.toFixed(2)}</h3>
-          </div>
-        </div>
-        <div className="dashboard-card">
-          <span className="material-symbols-sharp">inventory_2</span>
-          <div>
-            <p>Products</p>
-            <h3>{stats.totalProducts}</h3>
-          </div>
-        </div>
-        <div className="dashboard-card">
-          <span className="material-symbols-sharp">person_outline</span>
-          <div>
-            <p>Customers</p>
-            <h3>{stats.totalCustomers}</h3>
-          </div>
-        </div>
-        <div className="dashboard-card">
-          <span className="material-symbols-sharp">warning</span>
-          <div>
-            <p>Low Stock</p>
-            <h3>{stats.lowStock}</h3>
-          </div>
-        </div>
-      </div>
+    <div style={styles.container}>
+      <h1 style={styles.title}>{title} Page</h1>
+      <p style={styles.text}>This page is under construction. Please check back later.</p>
     </div>
   );
-}
+};
 
-export default Dashboard;
+const styles = {
+  container: {
+    padding: '80px 20px',
+    textAlign: 'center',
+    fontFamily: 'Arial, sans-serif',
+    color: '#555'
+  },
+  title: {
+    fontSize: '36px',
+    marginBottom: '20px',
+  },
+  text: {
+    fontSize: '18px',
+  }
+};
+
+export default Placeholder;
