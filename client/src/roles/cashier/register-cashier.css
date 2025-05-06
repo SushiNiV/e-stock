@@ -1,0 +1,213 @@
+/*=============== BASE RESET + FONT ===============*/
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@100..900&display=swap");
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+body,
+input,
+button {
+  font-family: "Montserrat", system-ui;
+  font-size: 15px;
+}
+
+body {
+  background-color: #ffffff;
+  color: rgba(65, 68, 71, 1);
+}
+
+input,
+button {
+  border: none;
+  outline: none;
+}
+
+a {
+  text-decoration: none;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.grid {
+  display: grid;
+  gap: 1rem;
+}
+
+/*=============== CASHIER REGISTER STYLES ===============*/
+.cashier-reg-wrapper {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: rgba(0, 0, 0, 0.55);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+}
+
+.cashier-reg-content-wrapper {
+  width: 100%;
+  max-width: 600px;
+  background-color: #f6f3ea;
+  display: grid;
+  place-items: center; 
+  padding: 2rem 2rem 0; 
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.cashier-reg-container {
+  width: 100%;
+}
+
+.cashier-reg-box {
+  width: 100%;
+  transition: transform 0.4s, opacity 0.4s 0.1s;
+}
+
+.cashier-reg-title {
+  display: block;
+  width: fit-content;
+  margin: 0 auto 2rem;
+  text-align: center;
+}
+
+.cashier-reg-form-wrapper {
+  width: 100%;
+}
+
+.cashier-reg-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.cashier-reg-form-fields {
+  display: grid;
+  gap: 1rem;
+}
+
+.cashier-reg-form-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background-color: #f7f9fc;
+  border-radius: 1rem;
+}
+
+.cashier-reg-form-input {
+  background: none;
+  width: 100%;
+  padding: 1.5rem 2.5rem 1.5rem 1.25rem;
+  font-weight: 600;
+  border: 2px solid rgba(65, 68, 71, 0.25);
+  border-radius: 1rem;
+  z-index: 1;
+  transition: border-color 0.4s;
+}
+
+.cashier-reg-form-label {
+  position: absolute;
+  left: 1.25rem;
+  font-weight: 600;
+  transition: transform 0.4s, font-size 0.4s, color 0.4s;
+}
+
+.cashier-reg-btn {
+  width: 100%;
+  display: inline-flex;
+  justify-content: center;
+  background-color: #31b6b3;
+  color: #ffffff;
+  font-weight: 600;
+  padding-block: 1.5rem;
+  border-radius: 4rem;
+  margin: 2rem auto 0;
+  cursor: pointer;
+  transition: background-color 0.4s, box-shadow 0.4s;
+}
+
+.cashier-reg-btn:hover {
+  background-color: #128686;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.cashier-reg-signup-link {
+  text-align: center;
+  font-size: 13px;
+  color: #414447;
+}
+
+.cashier-reg-signup-link button {
+  background: none;
+  color: #355fb5;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.4s;
+}
+
+.cashier-reg-signup-link button:hover {
+  color: #31b6b3;
+}
+
+/* Label Behavior */
+.cashier-reg-form-input:focus ~ .cashier-reg-form-label,
+.cashier-reg-form-input:not(:placeholder-shown) ~ .cashier-reg-form-label {
+  transform: translateY(-12px);
+  font-size: 11px;
+  color: #31b6b3;
+}
+
+.cashier-reg-form-input:focus {
+  padding-block: 2rem 1rem;
+  border-color: #31b6b3;
+}
+
+/*=============== RESPONSIVE BREAKPOINTS ===============*/
+@media screen and (max-width: 1199px) {
+  .cashier-reg-wrapper {
+    padding-inline: 1rem;
+  }
+
+  .cashier-reg-title {
+    font-size: 22px;
+    text-align: center;
+  }
+
+  .cashier-reg-form-wrapper {
+    width: 100%;
+  }
+
+  .cashier-reg-btn {
+    padding-block: 1rem;
+  }
+
+  .cashier-reg-form-input {
+    padding: 1rem 2.5rem 1rem 1.25rem;
+  }
+}
+
+@media screen and (min-width: 1200px) {
+  .cashier-reg-title {
+    font-size: 48px;
+    display: block;
+    width: fit-content;
+    margin: 0 auto 3rem;
+    text-align: center;
+  }
+
+  .cashier-reg-btn {
+    margin-bottom: 3rem;
+  }
+
+  .cashier-reg-form-wrapper {
+    width: 100%;
+  }
+}
