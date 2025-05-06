@@ -1,0 +1,100 @@
+.profile-container {
+    margin: 20px 50px 20px 75px;
+}
+
+.profile-title {
+    font-size: 48px;
+    text-align: initial;
+    margin-bottom: 1.5rem;
+}
+
+.profile-wrapper {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  position: relative;
+}
+
+.profile-picture {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  object-fit: cover;
+  background-color: #ddd;
+  box-shadow: 0 0 10px rgba(20, 20, 20, 0.5);
+  margin: 1rem 1.5rem 1rem 1rem;
+}
+
+.username {
+  margin: 0;
+  font-size: 1.2em;
+  font-weight: 600;
+  font-style: italic;
+}
+
+.fullname {
+    font-size: 2em;
+    font-weight: 700;
+}
+
+.edit-profile {
+    padding: 10px 20px;
+    font-size: 16px;
+    font-weight: 600;
+    background-color: #f6d884;
+    color: black;
+    border: none;
+    border-radius: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    position: absolute;
+    bottom: 10px; 
+    right: 10px;   
+}
+
+.edit-profile:hover {
+    background-color: #ea5a42;
+    color: white;
+    font-weight: 600;
+}
+
+hr {
+    border: 0;
+    border-top: 3px solid #355fb5; 
+    margin: 1.5rem 0 1.5rem;
+    width: 100%;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.profile-details {
+    position: relative;
+    margin: 0;
+    padding: 0 2rem;
+}
+
+.profile-heads {
+    font-size: 28px;
+}
+
+.profile-deets {
+    margin: 0.5rem 0 0 3rem;
+    font-size: 18px;
+}
+
+.deets {
+    font-weight: 500;
+}
+
+.p-info {
+    font-style: italic;
+    font-size: 15px;
+}
