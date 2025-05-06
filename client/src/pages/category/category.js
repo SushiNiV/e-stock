@@ -1,47 +1,96 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaEdit, FaTrashAlt, FaPlus } from 'react-icons/fa';
 import './category.css';
 
-function Categories() {
+function Categories({ showOverlay }) {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 
   useEffect(() => {
-    const fakeCategories = [
-      { id: 1, code: 'C001', category: 'Electronics' },
-      { id: 2, code: 'C002', category: 'Clothing' },
-      { id: 3, code: 'C003', category: 'Home Goods' },
-      { id: 4, code: 'C004', category: 'Beauty' },
-      { id: 5, code: 'C005', category: 'Sports' },
-      { id: 6, code: 'C006', category: 'Toys' },
-      { id: 7, code: 'C007', category: 'Books' },
-      { id: 8, code: 'C008', category: 'Food & Drink' },
-      { id: 9, code: 'C009', category: 'Automotive' },
-      { id: 10, code: 'C010', category: 'Health & Wellness' }
-    ];
-
-    setTimeout(() => {
-      setCategories(fakeCategories);
-      setLoading(false);
-    }, 1000);
+    fetchCategories();
   }, []);
 
-  const handleEdit = (id) => {
-    alert(`Edit category with ID: ${id}`);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const fetchCategories = () => {
+    setLoading(true);
+    setError(null);
+    fetch('http://localhost:3003/categories', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json',
+      },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        const formatted = data.map((item) => ({
+          id: item.CategoryID,
+          code: item.CategoryCode,
+          category: item.CategoryName,
+        }));
+        const sortedCategories = formatted.sort((a, b) => a.category.localeCompare(b.category));
+        setCategories(sortedCategories);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('Failed to fetch categories:', err);
+        setError('Failed to load categories. Please try again later.');
+        setLoading(false);
+      });
   };
 
-  const handleDelete = (id) => {
-    setCategories(categories.filter(category => category.id !== id));
+  const handleDelete = (categoryId) => {
+    if (window.confirm('Are you sure you want to delete this category?')) {
+      setCategories((prevCategories) =>
+        prevCategories.filter((category) => category.id !== categoryId)
+      );
+
+      fetch(`http://localhost:3003/categories/${categoryId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            alert('Category deleted successfully!');
+          } else {
+            alert('Failed to delete category.');
+            fetchCategories();
+          }
+        })
+        .catch((err) => {
+          console.error('Delete failed:', err);
+          alert('Failed to delete category.');
+          fetchCategories();
+        });
+    }
   };
 
-  const handleAdd = () => {
-    alert('Add new category');
+  const handleEdit = (category) => {
+    showOverlay(fetchCategories, 'edit-category', category, handleCategoryUpdated);
   };
 
-  const filteredCategories = categories.filter(cat =>
-    cat.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cat.code.toLowerCase().includes(searchTerm.toLowerCase())
+  const handleCategoryUpdated = async (updatedCategory) => {
+    setCategories((prevCategories) =>
+      prevCategories.map((cat) =>
+        cat.id === updatedCategory.id ? updatedCategory : cat
+      )
+    );
+  };
+
+  const filteredCategories = categories.filter((cat) =>
+    cat.category.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+    cat.code.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
   );
 
   return (
@@ -53,10 +102,10 @@ function Categories() {
           type="text"
           placeholder="Search by category or code"
           value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
+          onChange={(e) => setSearchTerm(e.target.value)}
           className="search-box"
         />
-        <button className="add-button" onClick={handleAdd}>
+        <button className="add-button" onClick={() => showOverlay(fetchCategories)}>
           <FaPlus style={{ marginRight: '8px' }} />
           Add
         </button>
@@ -64,6 +113,8 @@ function Categories() {
 
       {loading ? (
         <p>Loading categories...</p>
+      ) : error ? (
+        <p style={{ color: 'red' }}>{error}</p>
       ) : (
         <table className="category-table">
           <thead>
@@ -76,23 +127,37 @@ function Categories() {
             </tr>
           </thead>
           <tbody>
-            {filteredCategories.map((cat, index) => (
-              <tr key={cat.id}>
-                <td>{index + 1}</td>
-                <td>{cat.code}</td>
-                <td>{cat.category}</td>
-                <td>
-                  <button className="category-edit-button" onClick={() => handleEdit(cat.id)}>
-                    <FaEdit />
-                  </button>
-                </td>
-                <td>
-                  <button className="category-delete-button" onClick={() => handleDelete(cat.id)}>
-                    <FaTrashAlt />
-                  </button>
+            {filteredCategories.length === 0 ? (
+              <tr>
+                <td colSpan="5" style={{ textAlign: 'center' }}>
+                  No categories found.
                 </td>
               </tr>
-            ))}
+            ) : (
+              filteredCategories.map((cat, index) => (
+                <tr key={cat.id}>
+                  <td>{index + 1}</td>
+                  <td>{cat.code}</td>
+                  <td>{cat.category}</td>
+                  <td>
+                    <button
+                      className="category-edit-button"
+                      onClick={() => handleEdit(cat)}
+                    >
+                      <FaEdit />
+                    </button>
+                  </td>
+                  <td>
+                    <button
+                      className="category-delete-button"
+                      onClick={() => handleDelete(cat.id)} 
+                    >
+                      <FaTrashAlt />
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       )}
