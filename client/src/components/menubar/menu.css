@@ -1,3 +1,7 @@
+body {
+  background-color: #f6f3ea;
+}
+
 .menu-sidebar {
   display: flex;
   flex-direction: column;

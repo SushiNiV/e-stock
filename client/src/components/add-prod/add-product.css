@@ -1,0 +1,236 @@
+/*=============== GOOGLE FONTS ===============*/
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@100..900&display=swap");
+
+/*=============== BASE ===============*/
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+body,
+input,
+button {
+  font-family: "Montserrat", system-ui;
+  font-size: 16px;
+}
+
+body {
+  background-color: hsl(0, 0%, 100%);
+  color: hsl(220, 15%, 66%);
+}
+
+input,
+button,
+select {
+  border: none;
+  outline: none;
+}
+
+a {
+  text-decoration: none;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/*=============== REUSABLE CLASSES ===============*/
+.container {
+  max-width: 100vw;
+  margin-inline: 1.5rem;
+}
+
+.grid {
+  display: grid;
+  gap: 1rem;
+}
+
+/*=============== ADD PRODUCT ===============*/
+.a-wrapper {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.a-content-wrapper {
+  background-color: #f6d884;
+  padding: 2rem;
+  border-radius: 1.5rem;
+  width: 100%;
+  max-width: 600px;
+  position: relative;
+}
+
+.a-close-btn {
+  position: absolute;
+  right: 2rem;
+  top: 2rem;
+  font-size: 2rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.a-title {
+  font-size: 24px;
+  color: rgba(65, 68, 71, 1);
+  text-align: center;
+  margin-bottom: 2rem;
+  font-size: 30px;
+}
+
+.a-form-wrapper {
+  margin-top: 1rem;
+}
+
+.a-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.a-form-fields {
+  display: grid;
+  gap: 1rem;
+}
+
+.a-form-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border-radius: 1rem;
+}
+
+.a-form-group1 {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background-color: hsl(220, 50%, 97%);
+    border-radius: 1rem;
+}
+
+.a-form-groupp {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background-color: hsl(220, 50%, 97%);
+    border-radius: 1rem;
+}
+
+.a-input {
+  background: none;
+  width: 100%;
+  padding: 1.5rem 2.5rem 1.5rem 1.25rem;
+  font-weight: 600;
+  border: 2px solid rgba(65, 68, 71, 0.25);
+  border-radius: 1rem;
+  z-index: 1;
+  transition: border-color 0.4s;
+  color: rgba(65, 68, 71, 1);
+}
+
+.a-label {
+  position: absolute;
+  left: 1.25rem;
+  font-weight: 600;
+  transition: transform 0.4s, font-size 0.4s, color 0.4s;
+  pointer-events: none;
+  color: rgba(65, 68, 71, 0.7);
+}
+
+.a-icon {
+  position: absolute;
+  right: 1rem;
+  font-size: 1.25rem;
+  pointer-events: none;
+  transition: color 0.4s, transform 0.3s;
+}
+
+.a-input:focus ~ .a-label,
+.a-input:not(:placeholder-shown) ~ .a-label {
+  transform: translateY(-12px);
+  font-size: 11px;
+}
+
+.a-input:not(:placeholder-shown) {
+  padding-block: 2rem 1rem;
+}
+
+.a-input:focus {
+  padding-block: 2rem 1rem;
+  border-color: #31b6b3;
+}
+
+.a-input:focus ~ .a-label,
+.a-input:focus ~ .a-icon {
+  color: #31b6b3;
+}
+
+select.a-input {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background: none;
+  cursor: pointer;
+  font-family: "Montserrat", system-ui;
+  font-size: 16px;
+}
+
+select.a-input::-ms-expand {
+  display: none;
+}
+
+select.a-input:focus ~ .a-icon {
+  color: #31b6b3;
+  transform: rotate(180deg);
+}
+
+.a-btn {
+  width: 100%;
+  display: inline-flex;
+  justify-content: center;
+  background-color: #31b6b3;
+  color: hsl(0, 0%, 100%);
+  font-weight: 600;
+  padding-block: 1.5rem;
+  border-radius: 4rem;
+  margin-block: 2rem 1rem;
+  cursor: pointer;
+  transition: background-color 0.4s, box-shadow 0.4s;
+}
+
+.a-btn:hover {
+  background-color: #128686;
+  box-shadow: 0 8px 24px hsla(208, 92%, 32%, 0.3);
+}
+
+.a-prefixed {
+  position: relative;
+}
+
+.a-prefix {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1rem;
+  font-weight: 600;
+  color: #414447;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.a-prefixed .a-input {
+  padding-left: 2rem; /* Adjust to make space for ₱ */
+}
+
+@media screen and (min-width: 768px) {
+  .a-form-group.grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+}
