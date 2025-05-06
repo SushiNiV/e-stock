@@ -251,12 +251,14 @@ img {
   color: #31b6b3;
 }
 
-/* Input Label Behavior */
 .form-input:focus ~ .form-label,
 .form-input:not(:placeholder-shown) ~ .form-label {
   transform: translateY(-12px);
   font-size: 11px;
-  color: #31b6b3;
+}
+
+.form-input:not(:placeholder-shown) {
+  padding-block: 2rem 1rem;
 }
 
 .form-input:focus {
@@ -264,6 +266,7 @@ img {
   border-color: #31b6b3;
 }
 
+.form-input:focus ~ .form-label,
 .form-input:focus ~ .form-icon {
   color: #31b6b3;
 }
