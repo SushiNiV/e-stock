@@ -275,6 +275,9 @@ select.register-input.selected ~ .register-label,
 select.register-input:focus ~ .register-label {
   transform: translateY(-12px);
   font-size: 0.688rem;
+}
+
+select.register-input:focus ~ .register-label {
   color: #31b6b3;
 }
 
@@ -300,7 +303,6 @@ select.register-input:focus ~ .register-icon {
   transition: color 0.4s, transform 0.3s;
 }
 
-select.register-input.selected,
 select.register-input:focus,
 select.register-input:active {
   border-color: #31b6b3 !important;

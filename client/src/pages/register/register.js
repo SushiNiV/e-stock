@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import './register.css';
 import { RiEyeFill, RiEyeOffFill, RiMailFill, RiIdCardFill, RiUser3Fill } from 'react-icons/ri';
 import { FiChevronDown } from 'react-icons/fi';
-import axios from 'axios';
 
 function Register() {
   const [showPassword, setShowPassword] = useState(false);
@@ -19,23 +18,38 @@ function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const userData = {
-      firstName: name,
-      lastName: surname,
-      username,
-      role,
-      email,
-      password,
-    };
-
     try {
-      const response = await axios.post('http://localhost:5000/auth/register', userData);
+      const response = await fetch('http://localhost:3001/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username,
+          password,
+          role,
+          firstName: name,
+          lastName: surname,
+          email
+        }),
+      });
 
-      if (response.data.message === 'User registered successfully') {
-        navigate('/login');
+      if (response.ok) {
+        const data = await response.json();
+        localStorage.setItem('token', data.token);
+        if (role === 'Admin') {
+          navigate('/register-admin');
+        } else if (role === 'Cashier') {
+          navigate('/register-cashier');
+        } else {
+          navigate('/login');
+        }
+      } else {
+        const errMsg = await response.text();
+        setError(errMsg || 'Registration failed');
       }
-    } catch (error) {
-      setError('Registration failed! Please try again.');
+    } catch {
+      setError('Something went wrong');
     }
   };
 
@@ -47,7 +61,6 @@ function Register() {
         <div className="register container grid">
           <div className="register-access">
             <h1 className="register-title">Create new account</h1>
-
             <div className="register-area">
               <form className="register-form" onSubmit={handleSubmit}>
                 <div className="register-content grid">
@@ -77,7 +90,6 @@ function Register() {
                       <RiIdCardFill className="register-icon" />
                     </div>
                   </div>
-
                   <div className="register-box">
                     <input
                       type="email"
@@ -90,21 +102,20 @@ function Register() {
                     <label className="register-label">Email</label>
                     <RiMailFill className="register-icon" />
                   </div>
-
                   <div className="register-group grid">
-                  <div className="register-box">
-                    <input
-                      type="text"
-                      required
-                      placeholder=" "
-                      className="register-input"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      maxLength={15}
-                    />
-                    <label className="register-label">Username</label>
-                    <RiUser3Fill className="register-icon" />
-                  </div>
+                    <div className="register-box">
+                      <input
+                        type="text"
+                        required
+                        placeholder=" "
+                        className="register-input"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        maxLength={15}
+                      />
+                      <label className="register-label">Username</label>
+                      <RiUser3Fill className="register-icon" />
+                    </div>
                     <div className="register-box">
                       <select
                         required
@@ -122,7 +133,6 @@ function Register() {
                       </span>
                     </div>
                   </div>
-
                   <div className="register-box">
                     <input
                       type={showPassword ? 'text' : 'password'}
@@ -140,13 +150,10 @@ function Register() {
                       {showPassword ? <RiEyeFill /> : <RiEyeOffFill />}
                     </span>
                   </div>
-                  </div>
-
+                </div>
                 {error && <p className="register-error">{error}</p>}
-
                 <button type="submit" className="register-button">Create account</button>
               </form>
-
               <p className="register-switch">
                 Already have an account?{' '}
                 <Link to="/login"><button>Log In</button></Link>
