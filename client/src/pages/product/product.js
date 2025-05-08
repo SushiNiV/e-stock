@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaCircle } from 'react-icons/fa';
 import './product.css';
 
 function Products({ showOverlay }) {
@@ -19,7 +19,7 @@ function Products({ showOverlay }) {
       });
       const data = await res.json();
       setCategories(data);
-    } catch (err) {
+    } catch {
       setCategories([]);
     }
   }, [token]);
@@ -44,7 +44,7 @@ function Products({ showOverlay }) {
             stock: item.QuantityInStock ?? 0,
             reorderLevel: item.ReorderLevel ?? 0,
           };
-        }).sort((a, b) => a.name.localeCompare(b.name)); 
+        }).sort((a, b) => a.name.localeCompare(b.name));
         setProducts(formatted);
         setLoading(false);
       })
@@ -93,18 +93,18 @@ function Products({ showOverlay }) {
       ReorderLevel: prod.reorderLevel,
       CategoryID: categories.find(cat => cat.CategoryName === prod.category)?.CategoryID || null
     };
-  
+
     const handleUpdated = (updatedProduct) => {
       handleProductUpdated(updatedProduct);
-      fetchProducts(); 
+      fetchProducts();
     };
-  
+
     showOverlay(handleUpdated, 'edit-product', null, productToEdit);
   };
 
   const handleProductUpdated = (updatedProduct) => {
     if (!updatedProduct || !updatedProduct.ProductID) return;
-  
+
     setProducts((prev) =>
       prev.map((p) =>
         p.id === updatedProduct.ProductID
@@ -120,6 +120,35 @@ function Products({ showOverlay }) {
           : p
       )
     );
+  };
+
+  const handleRestock = (productId) => {
+    const product = products.find(p => p.id === productId);
+
+    const handleStockUpdated = async (newStockToAdd) => {
+      try {
+        const res = await fetch(`http://localhost:3004/products/${productId}/restock`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ quantityToAdd: Number(newStockToAdd) }),
+        });
+    
+        const result = await res.json();
+        if (result.success || res.ok) {
+          alert('Restocked successfully');
+          fetchProducts();
+        } else {
+          alert(result.error || 'Failed to restock.');
+        }
+      } catch {
+        alert('An error occurred while restocking.');
+      }
+    };
+
+    showOverlay(handleStockUpdated, 'update-stock', null, product);
   };
 
   const filteredProducts = products.filter(
@@ -184,10 +213,13 @@ function Products({ showOverlay }) {
                     <td>{prod.stock}</td>
                     <td>
                       <button onClick={() => handleEditProduct(prod.id)} className="edit-button">
-                        <FaEdit /> Edit
+                        <FaEdit />
                       </button>
                       <button onClick={() => handleDelete(prod.id)} className="delete-button">
-                        <FaTrash /> Delete
+                        <FaTrash />
+                      </button>
+                      <button onClick={() => handleRestock(prod.id)} className="restock-button">
+                        <FaCircle />
                       </button>
                     </td>
                   </tr>

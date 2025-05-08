@@ -81,7 +81,7 @@
 
 .products-table th:nth-child(3),
 .products-table td:nth-child(3) { 
-  width: 255px; 
+  width: 225px; 
 }
 
 .products-table tbody tr:nth-child(even) {
@@ -106,7 +106,10 @@
 }
 
 .edit-button,
-.delete-button {
+.delete-button,
+.restock-button {
+  display: inline-flex;
+  align-items: center;
   padding: 5px 10px;
   margin-right: 8px;
   font-size: 14px;
@@ -134,4 +137,13 @@
 .delete-button:hover {
   background-color: #d32f2f;
   color: white;
+}
+
+.restock-button {
+  background-color: #4caf50;
+  color: white;
+}
+
+.restock-button:hover {
+  background-color: #45a049;
 }
