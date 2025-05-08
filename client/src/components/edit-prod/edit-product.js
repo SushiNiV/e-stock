@@ -178,7 +178,7 @@ function EditProduct({ onClose, product, onUpdateProduct }) {
                   </div>
                 </div>
                 <button type="submit" className="a-btn" disabled={isLoading}>
-                  {isLoading ? 'Updating...' : 'Update Product'}
+                  {isLoading ? 'Saving...' : 'Save Changes'}
                 </button>
               </form>
             </div>
