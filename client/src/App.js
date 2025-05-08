@@ -23,7 +23,8 @@ import Menu from './components/menubar/menu';
 import AddCategory from './components/add-categ/add-category';
 import AddProduct from './components/add-prod/add-product';
 import EditCategory from './components/edit-categ/edit-category';
-import EditProduct from './components/edit-prod/edit-product'; // ✅ You forgot this
+import EditProduct from './components/edit-prod/edit-product';
+import UpdateStocks from './components/upd-prod/update-product';
 
 function Layout({ children }) {
   return (
@@ -38,6 +39,40 @@ function Layout({ children }) {
   );
 }
 
+function AppRoutes({ showOverlay, setProductToRestock }) {
+  const location = useLocation();
+  const isAuthRoute = location.pathname === '/login' || location.pathname === '/register';
+
+  const isAuthenticated = () => {
+    const token = localStorage.getItem('token');
+    return !!token;
+  };
+
+  return (
+    <Routes>
+      <Route path="/" element={<Navigate to="/login" />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/register-admin" element={<AdminRegister />} />
+      <Route path="/register-cashier" element={<CashierRegister />} />
+
+      {!isAuthRoute && (
+        <>
+          <Route path="/dashboard" element={isAuthenticated() ? <Layout><Dashboard /></Layout> : <Navigate to="/login" />} />
+          <Route path="/profile" element={isAuthenticated() ? <Layout><Profile /></Layout> : <Navigate to="/login" />} />
+          <Route path="/sales" element={isAuthenticated() ? <Layout><Inventory /></Layout> : <Navigate to="/login" />} />
+          <Route path="/categories" element={isAuthenticated() ? <Layout><Categories showOverlay={showOverlay} /></Layout> : <Navigate to="/login" />} />
+          <Route path="/products" element={isAuthenticated() ? <Layout><Products showOverlay={showOverlay} setProductToRestock={setProductToRestock} /></Layout> : <Navigate to="/login" />} />
+          <Route path="/sales-logs" element={isAuthenticated() ? <Layout><SalesLog /></Layout> : <Navigate to="/login" />} />
+          <Route path="/stock-logs" element={isAuthenticated() ? <Layout><StockLog /></Layout> : <Navigate to="/login" />} />
+          <Route path="/customers" element={isAuthenticated() ? <Layout><Customer /></Layout> : <Navigate to="/login" />} />
+          <Route path="/settings" element={isAuthenticated() ? <Layout><Settings /></Layout> : <Navigate to="/login" />} />
+        </>
+      )}
+    </Routes>
+  );
+}
+
 function App() {
   const [isOverlayVisible, setIsOverlayVisible] = useState(false);
   const [onCategoryAdded, setOnCategoryAdded] = useState(null);
@@ -47,6 +82,7 @@ function App() {
 
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [productToRestock, setProductToRestock] = useState(null);
 
   const showOverlay = (onAddedCallback, type = 'category', category = null, product = null) => {
     if (type === 'category') {
@@ -56,6 +92,7 @@ function App() {
       setOnProductUpdated(null);
       setSelectedCategory(null);
       setSelectedProduct(null);
+      setProductToRestock(null);
     } else if (type === 'product') {
       setOnProductAdded(() => onAddedCallback);
       setOnCategoryAdded(null);
@@ -63,6 +100,7 @@ function App() {
       setOnProductUpdated(null);
       setSelectedCategory(null);
       setSelectedProduct(null);
+      setProductToRestock(null);
     } else if (type === 'edit-category' && category) {
       setOnCategoryUpdated(() => onAddedCallback);
       setSelectedCategory(category);
@@ -70,13 +108,22 @@ function App() {
       setOnProductAdded(null);
       setOnProductUpdated(null);
       setSelectedProduct(null);
+      setProductToRestock(null);
     } else if (type === 'edit-product' && product) {
       setOnProductUpdated(() => onAddedCallback);
       setSelectedProduct(product);
       setOnProductAdded(null);
       setOnCategoryAdded(null);
       setOnCategoryUpdated(null);
+      setProductToRestock(null);
+    } else if (type === 'update-stock' && product) {
+      setOnProductUpdated(() => onAddedCallback);
+      setProductToRestock(product);
+      setSelectedProduct(null);
       setSelectedCategory(null);
+      setOnCategoryAdded(null);
+      setOnProductAdded(null);
+      setOnCategoryUpdated(null);
     }
 
     setIsOverlayVisible(true);
@@ -121,10 +168,21 @@ function App() {
   return (
     <UserProvider>
       <BrowserRouter>
-        <AppRoutes showOverlay={showOverlay} />
+        <AppRoutes showOverlay={showOverlay} setProductToRestock={setProductToRestock} />
         {isOverlayVisible && (
           <div className="overlay">
-            {selectedCategory ? (
+            {productToRestock ? (
+              <UpdateStocks
+              initialStock={productToRestock.QuantityInStock}
+              onClose={() => {
+                setProductToRestock(null);
+                setIsOverlayVisible(false);
+              }}
+              onSubmit={(newStock) => {
+                handleProductUpdated(newStock); // JUST pass the number
+              }}
+            />
+            ) : selectedCategory ? (
               <EditCategory
                 category={selectedCategory}
                 onClose={hideOverlay}
@@ -145,40 +203,6 @@ function App() {
         )}
       </BrowserRouter>
     </UserProvider>
-  );
-}
-
-function AppRoutes({ showOverlay }) {
-  const location = useLocation();
-  const isAuthRoute = location.pathname === '/login' || location.pathname === '/register';
-
-  const isAuthenticated = () => {
-    const token = localStorage.getItem('token');
-    return !!token;
-  };
-
-  return (
-    <Routes>
-      <Route path="/" element={<Navigate to="/login" />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/register-admin" element={<AdminRegister />} />
-      <Route path="/register-cashier" element={<CashierRegister />} />
-
-      {!isAuthRoute && (
-        <>
-          <Route path="/dashboard" element={isAuthenticated() ? <Layout><Dashboard /></Layout> : <Navigate to="/login" />} />
-          <Route path="/profile" element={isAuthenticated() ? <Layout><Profile /></Layout> : <Navigate to="/login" />} />
-          <Route path="/inventory" element={isAuthenticated() ? <Layout><Inventory /></Layout> : <Navigate to="/login" />} />
-          <Route path="/categories" element={isAuthenticated() ? <Layout><Categories showOverlay={showOverlay} /></Layout> : <Navigate to="/login" />} />
-          <Route path="/products" element={isAuthenticated() ? <Layout><Products showOverlay={showOverlay} /></Layout> : <Navigate to="/login" />} />
-          <Route path="/sales-logs" element={isAuthenticated() ? <Layout><SalesLog /></Layout> : <Navigate to="/login" />} />
-          <Route path="/stock-logs" element={isAuthenticated() ? <Layout><StockLog /></Layout> : <Navigate to="/login" />} />
-          <Route path="/customers" element={isAuthenticated() ? <Layout><Customer /></Layout> : <Navigate to="/login" />} />
-          <Route path="/settings" element={isAuthenticated() ? <Layout><Settings /></Layout> : <Navigate to="/login" />} />
-        </>
-      )}
-    </Routes>
   );
 }
 
