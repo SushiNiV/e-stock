@@ -118,6 +118,8 @@
 
 .category-edit-button,
 .category-delete-button {
+  display: inline-flex;
+  align-items: center;
   padding: 5px 10px;
   margin-right: 8px;
   font-size: 14px;
