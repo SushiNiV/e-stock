@@ -25,14 +25,12 @@ function Login() {
         const data = await res.json();
         const { token, storeId, username, firstName, lastName, role } = data;
 
-        // ✅ Save everything under one `user` key
         const userObject = { storeId, username, firstName, lastName, role };
         localStorage.setItem('user', JSON.stringify(userObject));
         localStorage.setItem('token', token);
 
         console.log('User details saved in localStorage:', userObject);
 
-        // ✅ Redirect to dashboard
         navigate('/dashboard');
       } else {
         const error = await res.json();
