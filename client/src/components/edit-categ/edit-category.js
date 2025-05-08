@@ -9,12 +9,10 @@ function EditCategory({ category, onClose, onUpdateCategory }) {
   const token = localStorage.getItem('token');
   const storeId = category.storeId;
 
-  // Handle input change
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // Handle form submission (update category)
   const handleSubmit = async (e) => {
     e.preventDefault();
     const formattedName = form.name;
