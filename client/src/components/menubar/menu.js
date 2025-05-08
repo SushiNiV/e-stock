@@ -5,7 +5,7 @@ import './menu.css';
 function Menu() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [user, setUser] = useState(null);
-  const navigate = useNavigate(); // Using useNavigate to redirect to login
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -86,9 +86,9 @@ function Menu() {
             <span className="material-symbols-sharp">grid_view</span>
             Dashboard
           </NavLink>
-          <NavLink to="/inventory" className={({ isActive }) => `menu-link${isActive ? ' active' : ''}`}>
+          <NavLink to="/sales" className={({ isActive }) => `menu-link${isActive ? ' active' : ''}`}>
             <span className="material-symbols-sharp">warehouse</span>
-            Inventory
+            Sales
           </NavLink>
           <NavLink to="/categories" className={({ isActive }) => `menu-link${isActive ? ' active' : ''}`}>
             <span className="material-symbols-sharp">category</span>
