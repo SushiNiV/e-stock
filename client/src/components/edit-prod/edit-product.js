@@ -62,10 +62,16 @@ function EditProduct({ onClose, product, onUpdateProduct }) {
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
-        setCategories(data.map(cat => ({
-          id: cat.CategoryID,
-          name: cat.CategoryName
-        })));
+
+          const sortedCategories = data
+          .map(cat => ({
+            id: cat.CategoryID,
+            name: cat.CategoryName
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name));
+
+        setCategories(sortedCategories);
+        
         const currentCat = data.find(c => c.CategoryID === product?.CategoryID);
         if (currentCat) {
           setCategory(currentCat.CategoryName);
