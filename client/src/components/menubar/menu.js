@@ -86,6 +86,10 @@ function Menu() {
             <span className="material-symbols-sharp">grid_view</span>
             Dashboard
           </NavLink>
+          <NavLink to="/alerts" className={({ isActive }) => `menu-link${isActive ? ' active' : ''}`}>
+            <span className="material-symbols-sharp">notifications</span>
+            Alerts
+          </NavLink>
           <NavLink to="/sales" className={({ isActive }) => `menu-link${isActive ? ' active' : ''}`}>
             <span className="material-symbols-sharp">warehouse</span>
             Sales
@@ -109,10 +113,6 @@ function Menu() {
           <NavLink to="/customers" className={({ isActive }) => `menu-link${isActive ? ' active' : ''}`}>
             <span className="material-symbols-sharp">person_outline</span>
             Customer
-          </NavLink>
-          <NavLink to="/settings" className={({ isActive }) => `menu-link${isActive ? ' active' : ''}`}>
-            <span className="material-symbols-sharp">settings</span>
-            Settings
           </NavLink>
         </nav>
       </div>
