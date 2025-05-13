@@ -147,3 +147,34 @@
 .restock-button:hover {
   background-color: #45a049;
 }
+
+.b-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  font-size: 14px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  background-color: #f6d884;
+}
+
+.b-button:hover {
+  background-color: #ea5a42;
+  color: white;
+}
+
+.b-button svg {
+  align-items: center;
+  vertical-align: middle;
+}
+
+.sort-buttons {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.5rem;
+  border-radius: 4px;
+  margin-bottom: -1rem;
+}
