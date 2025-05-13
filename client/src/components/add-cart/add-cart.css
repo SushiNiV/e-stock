@@ -1,0 +1,101 @@
+.a-content-wrapperr {
+  position: relative;
+  width: 100%;
+  max-width: 1000px;
+  max-height: 90vh;      
+  overflow-y: auto;
+  background-color: #f6d884;
+  display: grid;
+  place-items: center;
+  padding: 2rem 2rem 0;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.cart-table-wrapper {
+  margin-top: 20px;
+  overflow-x: auto;
+}
+
+.cart-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 16px;
+  background-color: #f6f3ea;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+}
+
+.cart-table th,
+.cart-table td {
+  padding: 16px 20px;
+  text-align: center;
+  border-bottom: 1px solid #e0e0e0;
+  color: black;
+}
+
+.cart-table thead {
+  background-color: #31b6b3;
+  font-weight: bold;
+}
+
+.cart-table tbody tr:nth-child(even) {
+  background-color: #f0f0f0;
+}
+
+.cart-table tbody tr:nth-child(odd) {
+  background-color: #ffffff;
+}
+
+.cart-table tbody tr:hover {
+  background-color: rgba(49, 182, 179, 0.15);
+}
+
+.cart-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.cart-qty-input {
+  width: 60px;
+  padding: 6px;
+  font-size: 14px;
+  text-align: center;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.cart-delete-button {
+  background-color: #f44336;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  font-size: 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.cart-delete-button:hover {
+  background-color: #d32f2f;
+}
+
+.a-btnn {
+  width: 100%;
+  display: inline-flex;
+  justify-content: center;
+  background-color: #31b6b3;
+  color: hsl(0, 0%, 100%);
+  font-weight: 600;
+  padding-block: 1.5rem;
+  border-radius: 4rem;
+  margin-block: 2rem 1rem;
+  margin-bottom: 3rem;
+  cursor: pointer;
+  transition: background-color 0.4s, box-shadow 0.4s;
+}
+
+.a-btnn:hover {
+  background-color: #128686;
+  box-shadow: 0 8px 24px hsla(208, 92%, 32%, 0.3);
+}
