@@ -76,7 +76,7 @@ function StockLog() {
       <div className="b-search-add-container">
         <input
           type="text"
-          placeholder="Search by product name or code"
+          placeholder="Search by product name, or code"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="b-input"
@@ -96,12 +96,11 @@ function StockLog() {
             <th>Code</th>
             <th>Product</th>
             <th>Type</th>
-            <th>Qty Changed</th>
+            <th>Qty</th>
             <th>Before</th>
             <th>After</th>
             <th>Date</th>
             <th>User</th>
-            <th>Action</th>
           </tr>
         </thead>
         <tbody>
@@ -124,17 +123,12 @@ function StockLog() {
                   <td>{log.stockAfter}</td>
                   <td>{new Date(log.date).toLocaleDateString()}</td>
                   <td>{log.user}</td>
-                  <td>
-                    <button className="b-button" onClick={refetchLogs}>
-                      <FaEdit />
-                    </button>
-                  </td>
                 </tr>
                 {expandedRowId === log.id && (
                   <tr className="b-expanded-row">
                     <td colSpan="11">
                       <div className="b-details-box">
-                        <p><b>Time:</b> {new Date(log.date).toLocaleString()}</p>
+                        <p><b>Time and Date:</b> {new Date(log.date).toLocaleString()}</p>
                         <p><b>Note:</b> {log.note}</p>
                       </div>
                     </td>

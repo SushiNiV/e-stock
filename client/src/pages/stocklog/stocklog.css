@@ -31,8 +31,9 @@
   }
   
   .b-button {
+    display: inline-flex;
+    align-items: center;
     padding: 5px 10px;
-    margin-right: 8px;
     font-size: 14px;
     border: none;
     border-radius: 8px;
