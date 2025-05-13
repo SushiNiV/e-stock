@@ -1,0 +1,89 @@
+.category-bar-wrapper {
+  position: relative; 
+}
+
+.category-bar {
+    display: flex;
+    gap: 0.5rem;
+    margin: 1rem 1rem;
+    border-bottom: 2px solid #ccc;
+    padding: 0 0.5rem 0.5rem; 
+    position: relative;
+    overflow-x: scroll;
+    white-space: nowrap; 
+    max-width: 100%;
+}
+
+.category-bar::-webkit-scrollbar {
+  display: none;
+}
+  
+.category-button {
+    background: none;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    color: #555;
+    padding: 0.5rem 1rem;
+    transition: color 0.3s, border-bottom 0.3s;
+}
+  
+.category-button:hover,
+.category-button.active {
+    color: #007bff;
+    border-bottom: 2px solid #007bff;
+}
+
+.scroll-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  color: black;
+  padding: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  z-index: 1;
+  transition: background-color 0.2s ease;
+}
+
+.scroll-arrow.left {
+  left: -10px; 
+}
+
+.scroll-arrow.right {
+  right: -10px; 
+}
+
+.sort-and-cart-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 1rem 0 -0.75rem;
+}
+
+.sort-buttonss {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  border-radius: 4px;
+}
+
+.cart-btn {
+  display: inline-flex;
+  justify-content: center;
+  background-color: #31b6b3;
+  color: black;
+  font-weight: 600;
+  font-size: 18px;
+  padding: 0.5rem 1rem;
+  border-radius: 4rem;
+  cursor: pointer;
+  transition: background-color 0.4s, box-shadow 0.4s;
+}
+
+.cart-btn:hover {
+  background-color: #128686;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
