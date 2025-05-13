@@ -1,0 +1,200 @@
+.customer-page {
+  margin: 20px 50px 20px 75px;
+}
+
+.customer-page h2 {
+  font-size: 48px;
+  color: rgba(65, 68, 71, 1);
+  margin-bottom: 1rem;
+}
+
+.customer-search-box {
+  flex: 1;
+  padding: 10px 20px;
+  width: 75%;
+  font-size: 16px;
+  border: 2px solid rgba(65, 68, 71, 0.25);
+  border-radius: 1rem;
+}
+
+.customer-search-box:focus {
+  border-color: rgba(49, 182, 179, 0.5);
+}
+
+.customer-search-add-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+.customer-add-button {
+  padding: 10px 20px;
+  font-size: 16px;
+  background-color: #f6d884;
+  color: black;
+  border: none;
+  border-radius: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.customer-add-button:hover {
+  background-color: #ea5a42;
+  color: white;
+}
+
+.customer-add-button svg {
+  vertical-align: middle;
+}
+
+.customer-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 30px;
+  font-size: 16px;
+  background-color: #f6f3ea;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.customer-table th,
+.customer-table td {
+  padding: 16px 20px;
+  text-align: left;
+  border-bottom: 1px solid hsl(0, 0%, 88%);
+  color: black;
+}
+
+.customer-table thead {
+  background-color: #31b6b3;
+  font-weight: bold;
+  text-align: center;
+}
+
+.customer-table th:nth-child(1), 
+.customer-table td:nth-child(1) {
+  width: 60px;
+  text-align: center;
+}
+
+.customer-table th:nth-child(2),
+.customer-table td:nth-child(2) {
+  width: 100px;
+}
+
+.customer-table th:nth-child(3),
+.customer-table td:nth-child(3) {
+  width: 255px;
+}
+
+.customer-table th:last-child,
+.customer-table td:last-child {
+  text-align: center;
+}
+
+.customer-table tbody tr:nth-child(even) {
+  background-color: #f0f0f0;
+}
+
+.customer-table tbody tr:nth-child(odd) {
+  background-color: #ffffff;
+}
+
+.customer-table tbody tr:hover {
+  background-color: rgba(49, 182, 179, 0.15);
+}
+
+.customer-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.customer-edit-button,
+.customer-delete-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  margin-right: 8px;
+  font-size: 14px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.customer-edit-button {
+  background-color: #f6d884;
+  color: black;
+}
+
+.customer-edit-button:hover {
+  background-color: #ea5a42;
+  color: white;
+}
+
+.customer-delete-button {
+  background-color: #f44336;
+  color: white;
+}
+
+.customer-delete-button:hover {
+  background-color: #d32f2f;
+  color: white;
+}
+
+.customer-expanded-row {
+  background-color: #f6f3ea !important;
+}
+
+.customer-expanded-row td {
+  padding: 1rem !important;
+  border: none;
+}
+
+.borrowed-products-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: 0.95rem;
+  background-color: black;
+  border: 1px solid #ddd;
+}
+
+.borrowed-products-table th,
+.borrowed-products-table td {
+  border: 1px solid #ccc;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.borrowed-products-table th {
+  background-color: #f6d884;
+  color: #333;
+}
+
+.borrowed-products-table:hover {
+  background-color: rgba(49, 182, 179, 0.1);
+  color: #333;
+}
+
+.pay-button {
+  background-color: #4caf50;
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  margin-right: 8px;
+  font-size: 14px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.pay-button:hover {
+  background-color: #45a049;
+}
