@@ -8,6 +8,7 @@ function Categories({ showOverlay }) {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState({ key: 'category', direction: 'asc' });
 
   useEffect(() => {
     fetchCategories();
@@ -35,8 +36,7 @@ function Categories({ showOverlay }) {
           code: item.CategoryCode,
           category: item.CategoryName,
         }));
-        const sortedCategories = formatted.sort((a, b) => a.category.localeCompare(b.category));
-        setCategories(sortedCategories);
+        setCategories(formatted);
         setLoading(false);
       })
       .catch((err) => {
@@ -88,10 +88,30 @@ function Categories({ showOverlay }) {
     );
   };
 
-  const filteredCategories = categories.filter((cat) =>
-    cat.category.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-    cat.code.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
-  );
+  const handleSort = (key) => {
+    setSortBy((prev) => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
+    }));
+  };
+
+  const sortFunction = (a, b) => {
+    const { key, direction } = sortBy;
+    let comparison = 0;
+
+    if (key === 'category' || key === 'code') {
+      comparison = a[key].localeCompare(b[key]);
+    }
+
+    return direction === 'asc' ? comparison : -comparison;
+  };
+
+  const filteredCategories = categories
+    .filter((cat) =>
+      cat.category.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+      cat.code.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+    )
+    .sort(sortFunction);
 
   return (
     <div className="category-page">
@@ -108,6 +128,15 @@ function Categories({ showOverlay }) {
         <button className="add-button" onClick={() => showOverlay(fetchCategories)}>
           <FaPlus style={{ marginRight: '8px' }} />
           Add
+        </button>
+      </div>
+
+      <div className="sort-buttons">
+        <button onClick={() => handleSort('category')} className="b-button">
+          Sort by Name: {sortBy.key === 'category' ? (sortBy.direction === 'asc' ? 'A-Z' : 'Z-A') : 'A-Z'}
+        </button>
+        <button onClick={() => handleSort('code')} className="b-button">
+          Sort by Code: {sortBy.key === 'code' ? (sortBy.direction === 'asc' ? 'A-Z' : 'Z-A') : 'A-Z'}
         </button>
       </div>
 
@@ -140,18 +169,12 @@ function Categories({ showOverlay }) {
                   <td>{cat.code}</td>
                   <td>{cat.category}</td>
                   <td>
-                    <button
-                      className="category-edit-button"
-                      onClick={() => handleEdit(cat)}
-                    >
+                    <button className="category-edit-button" onClick={() => handleEdit(cat)}>
                       <FaEdit />
                     </button>
                   </td>
                   <td>
-                    <button
-                      className="category-delete-button"
-                      onClick={() => handleDelete(cat.id)} 
-                    >
+                    <button className="category-delete-button" onClick={() => handleDelete(cat.id)}>
                       <FaTrashAlt />
                     </button>
                   </td>
