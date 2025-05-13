@@ -16,11 +16,24 @@ function SalesLog() {
   useEffect(() => {
     const fetchLogs = async () => {
       try {
-        const response = await fetch('https://your-api-endpoint.com/sales-logs');
+        const token = localStorage.getItem('token');
+        if (!token) {
+          alert("You are not logged in. Please log in first.");
+          return;
+        }
+    
+        const response = await fetch('http://localhost:3004/sales-log', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+    
         if (!response.ok) {
           throw new Error('Failed to fetch data');
         }
+    
         const data = await response.json();
+        console.log('Sales log data:', data);
         setLogs(data);
       } catch (error) {
         console.error(error);
@@ -32,13 +45,13 @@ function SalesLog() {
 
   const filteredLogs = logs.filter((log) => {
     const matchesSearch =
-      log.productName.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-      log.logCode.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
-
+      (log.productName || '').toLowerCase().includes((debouncedSearchTerm || '').toLowerCase()) ||
+      (log.logCode || '').toLowerCase().includes((debouncedSearchTerm || '').toLowerCase());
+  
     const matchesDate = searchDate
-      ? log.saleDate.startsWith(searchDate)
+      ? new Date(log.saleDate).toISOString().slice(0, 10) === searchDate
       : true;
-
+  
     return matchesSearch && matchesDate;
   });
 
@@ -77,7 +90,6 @@ function SalesLog() {
             <th>Method</th>
             <th>Date</th>
             <th>Customer</th>
-            <th>Action</th>
           </tr>
         </thead>
         <tbody>
@@ -88,36 +100,35 @@ function SalesLog() {
               </td>
             </tr>
           ) : (
-            filteredLogs.map((log, index) => (
-              <React.Fragment key={log.logID}>
-                <tr onClick={() => toggleRow(log.logID)} className="b-row b-row-clickable">
-                  <td>{index + 1}</td>
-                  <td>{log.logCode}</td>
-                  <td>{log.productName}</td>
-                  <td>{log.quantitySold}</td>
-                  <td>₱{log.totalAmount.toFixed(2)}</td>
-                  <td>{log.paymentStatus}</td>
-                  <td>{log.paymentMethod}</td>
-                  <td>{new Date(log.saleDate).toLocaleDateString()}</td>
-                  <td>{log.customerName || 'Walk-in'}</td>
-                  <td>
-                    <button className="b-button">
-                      <FaEdit />
-                    </button>
-                  </td>
-                </tr>
-                {expandedRowId === log.logID && (
+            filteredLogs.map((log, index) => {
+              const date = new Date(log.date);
+
+              return (
+                <React.Fragment key={log.id}>
+                  <tr onClick={() => toggleRow(log.id)} className="b-row b-row-clickable">
+                    <td>{index + 1}</td>
+                    <td>{log.code}</td>
+                    <td>{log.productName}</td>
+                    <td>{log.quantitySold}</td>
+                    <td>₱{Number(log.totalAmount || 0).toFixed(2)}</td>
+                    <td>{log.paymentStatus}</td>
+                    <td>{log.paymentMethod}</td>
+                    <td>{new Date(log.date).toLocaleDateString()}</td>
+                    <td>{log.customerName || 'Walk-in'}</td>
+                  </tr>
+                  {expandedRowId === log.id && (
                   <tr className="b-expanded-row">
                     <td colSpan="10">
                       <div className="b-details-box">
-                        <p><b>Time:</b> {new Date(log.saleDate).toLocaleString()}</p>
-                        <p><b>Note:</b> {log.note || 'No note'}</p>
+                        <p><b>Sale Time and Date:</b> {new Date(log.date).getTime() ? new Date(log.date).toLocaleString() : 'Invalid Date'}</p> {/* Updated from log.saleDate */}
+                        <p><b>Note:</b> {log.note || 'No additional notes'}</p>
                       </div>
                     </td>
                   </tr>
                 )}
-              </React.Fragment>
-            ))
+                </React.Fragment>
+              );
+            })
           )}
         </tbody>
       </table>
