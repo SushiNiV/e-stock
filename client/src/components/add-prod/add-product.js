@@ -24,7 +24,6 @@ function AddProduct({ onClose, onAddProduct }) {
   const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Get user and token from localStorage
   const user = JSON.parse(localStorage.getItem('user'));
   const token = localStorage.getItem('token');
   const storeId = user?.storeId;
@@ -64,10 +63,16 @@ function AddProduct({ onClose, onAddProduct }) {
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
-        setCategories(data.map(cat => ({
+
+        const sortedCategories = data
+        .map(cat => ({
           id: cat.CategoryID,
           name: cat.CategoryName
-        })));
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      setCategories(sortedCategories);
+      
       } catch (error) {
         console.error('Error fetching categories:', error);
       } finally {
