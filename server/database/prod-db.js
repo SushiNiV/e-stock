@@ -491,9 +491,8 @@ app.patch('/products/:productId/restock', authenticateToken, validateStoreOwners
       if (err) return res.status(500).json({ error: 'Failed to update stock' });
 
       const changeType = 'Restocked';
-      const logPrefix = 'L' + changeType.substring(0, 3).toUpperCase(); // LRES
+      const logPrefix = 'L' + changeType.substring(0, 3).toUpperCase();
 
-      // Generate a unique LogCode for this store
       const generateUniqueLogCode = () => {
         return new Promise((resolve, reject) => {
           const getLastLogCode = `
