@@ -1,15 +1,27 @@
 require('dotenv').config();
+const upload = require('./upload');
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const mysql = require('mysql2');
 const jwt = require('jsonwebtoken');
+const http = require('http');
+const socketIo = require('socket.io');
 
 const app = express();
+const server = http.createServer(app);
+const io = socketIo(server, {
+  cors: {
+    origin: 'http://localhost:3000',
+    methods: ['GET', 'POST'], 
+    allowedHeaders: ['Content-Type'], 
+    credentials: true,
+  },
+});
 
 app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
 app.use(bodyParser.json());
-app.use(express.json()); 
+app.use(express.json());
 
 const db = mysql.createConnection({
   host: process.env.DB_HOST,
@@ -51,15 +63,48 @@ app.get('/products', authenticateToken, (req, res) => {
 
   db.query('SELECT * FROM Products WHERE StoreID = ?', [storeId], (err, results) => {
     if (err) return res.status(500).json({ error: err.message });
-    res.json(results);
+
+    const formattedResults = results.map(product => {
+      const imageUrl = product.ProductImage
+        ? `http://localhost:3004/uploads/${product.ProductImage}`
+        : 'http://localhost:3004/uploads/default.jpg';
+
+      return {
+        ...product,
+        ProductImage: imageUrl,
+      };
+    });
+
+    res.json(formattedResults);
   });
 });
 
+const path = require('path');
+const pathToServe = path.join(__dirname, 'uploads');
+console.log("Serving static files from:", pathToServe);
+console.log('Serving from path:', path.join(__dirname, 'uploads'));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+app.use((req, res, next) => {
+  console.log(`Request URL: ${req.url}`);
+  next();
+});
+
 //creates a new product
-app.post('/products', authenticateToken, (req, res) => {
-  const { ProductName, CategoryID, UnitPrice, SalePrice, QuantityInStock, ReorderLevel } = req.body;
+app.post('/products', authenticateToken, upload.single('ProductImage'), (req, res) => {
+  const {
+    ProductName, CategoryID, UnitPrice, SalePrice,
+    QuantityInStock, ReorderLevel
+  } = req.body;
+
   const StoreID = req.user.storeId;
-  const UserID = req.user.id; 
+  const UserID = req.user.id;
+  const ProductImage = req.file ? req.file.filename : null;
+  if (req.file && req.file.filename) {
+    console.log('Uploaded file:', req.file.filename);
+  } else {
+    console.error('No file uploaded');
+  }
 
   if (
     !ProductName || CategoryID == null || UnitPrice == null ||
@@ -106,13 +151,16 @@ app.post('/products', authenticateToken, (req, res) => {
 
           const insertProductQuery = `
             INSERT INTO Products 
-              (ProductName, CategoryID, UnitPrice, SalePrice, QuantityInStock, ReorderLevel, StoreID, ProductCode)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+              (ProductName, CategoryID, UnitPrice, SalePrice, QuantityInStock, ReorderLevel, StoreID, ProductCode, ProductImage)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
           `;
 
           db.query(
             insertProductQuery,
-            [ProductName, CategoryID, UnitPrice, SalePrice, QuantityInStock, ReorderLevel, StoreID, ProductCode],
+            [
+              ProductName, CategoryID, UnitPrice, SalePrice,
+              QuantityInStock, ReorderLevel, StoreID, ProductCode, ProductImage
+            ],
             (err, result) => {
               if (err) return res.status(500).json({ error: err.message });
 
@@ -281,11 +329,12 @@ app.delete('/products/:productId', authenticateToken, (req, res) => {
 });
 
 //update a product
-app.put('/products/:productId', authenticateToken, validateStoreOwnership, (req, res) => {
+app.put('/products/:productId', authenticateToken, validateStoreOwnership, upload.single('ProductImage'), (req, res) => {
   const { productId } = req.params;
   const { ProductName, UnitPrice, SalePrice, QuantityInStock, ReorderLevel, CategoryName } = req.body;
   const storeId = req.user.storeId;
   const userId = req.user.id;
+  const file = req.file;
 
   if (!productId || !ProductName || !UnitPrice || !SalePrice || !QuantityInStock || !ReorderLevel || !CategoryName || !storeId) {
     return res.status(400).json({ error: 'Missing required fields' });
@@ -307,12 +356,25 @@ app.put('/products/:productId', authenticateToken, validateStoreOwnership, (req,
 
       const existingProduct = results[0];
 
+      const imagePath = file ? file.filename : existingProduct.ProductImage;
+
       const updateQuery = `
         UPDATE Products
-        SET ProductName = ?, UnitPrice = ?, SalePrice = ?, QuantityInStock = ?, ReorderLevel = ?, CategoryID = ?
+        SET ProductName = ?, UnitPrice = ?, SalePrice = ?, QuantityInStock = ?, ReorderLevel = ?, CategoryID = ?, ProductImage = ?
         WHERE ProductID = ? AND StoreID = ?
       `;
-      db.query(updateQuery, [trimmedProductName, UnitPrice, SalePrice, QuantityInStock, ReorderLevel, categoryID, productId, storeId], (err, result) => {
+
+      db.query(updateQuery, [
+        trimmedProductName,
+        UnitPrice,
+        SalePrice,
+        QuantityInStock,
+        ReorderLevel,
+        categoryID,
+        imagePath,
+        productId,
+        storeId
+      ], (err, result) => {
         if (err) return res.status(500).json({ error: 'Error updating product' });
         if (result.affectedRows === 0) return res.status(404).json({ error: 'Product not found' });
 
@@ -344,49 +406,47 @@ app.put('/products/:productId', authenticateToken, validateStoreOwnership, (req,
 
             const logCode = `${logPrefix}${String(nextLogNumber).padStart(3, '0')}`;
             const note = 'Stock corrected via product update';
+
             const insertLogQuery = `
               INSERT INTO stocklog 
                 (LogCode, ProductID, ProductName, ProductCode, ChangeType, QuantityChanged, StockBefore, StockAfter, Note, StoreID, UserID)
               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `;
 
-            db.query(
-              insertLogQuery,
-              [
-                logCode,
-                existingProduct.ProductID,
-                trimmedProductName,
-                existingProduct.ProductCode,
-                changeType,
-                quantityChanged,
-                existingProduct.QuantityInStock,
-                QuantityInStock,
-                note,
-                storeId,
-                userId
-              ],
-              (logInsertErr) => {
-                if (logInsertErr) {
-                  console.error('⚠️ Failed to insert correction log:', logInsertErr);
-                  return res.json({ success: true, warning: 'Product updated but log not created' });
-                }
-
-                console.log(`✅ Stock correction log inserted: ${logCode}`);
-
-                res.json({
-                  success: true,
-                  id: productId,
-                  name: trimmedProductName,
-                  unitPrice: UnitPrice,
-                  salePrice: SalePrice,
-                  quantityInStock: QuantityInStock,
-                  reorderLevel: ReorderLevel,
-                  categoryName: CategoryName,
-                  storeId,
-                  logCode
-                });
+            db.query(insertLogQuery, [
+              logCode,
+              existingProduct.ProductID,
+              trimmedProductName,
+              existingProduct.ProductCode,
+              changeType,
+              quantityChanged,
+              existingProduct.QuantityInStock,
+              QuantityInStock,
+              note,
+              storeId,
+              userId
+            ], (logInsertErr) => {
+              if (logInsertErr) {
+                console.error('⚠️ Failed to insert correction log:', logInsertErr);
+                return res.json({ success: true, warning: 'Product updated but log not created' });
               }
-            );
+
+              console.log(`✅ Stock correction log inserted: ${logCode}`);
+
+              res.json({
+                success: true,
+                id: productId,
+                name: trimmedProductName,
+                unitPrice: UnitPrice,
+                salePrice: SalePrice,
+                quantityInStock: QuantityInStock,
+                reorderLevel: ReorderLevel,
+                categoryName: CategoryName,
+                storeId,
+                imagePath,
+                logCode
+              });
+            });
           });
         } else {
           res.json({
@@ -398,7 +458,8 @@ app.put('/products/:productId', authenticateToken, validateStoreOwnership, (req,
             quantityInStock: QuantityInStock,
             reorderLevel: ReorderLevel,
             categoryName: CategoryName,
-            storeId
+            storeId,
+            imagePath
           });
         }
       });
@@ -503,23 +564,32 @@ app.get('/stock-logs', authenticateToken, (req, res) => {
     WHERE sl.StoreID = ?
     ORDER BY sl.DateTime DESC
   `;
+
   db.query(query, [storeId], (err, results) => {
     if (err) {
       console.error('Failed to fetch stock logs:', err);
       return res.status(500).json({ error: 'Failed to fetch stock logs' });
     }
+
     const formattedResults = results.map(log => {
-      const formattedQuantity = log.quantityChanged >= 0
-        ? `+${log.quantityChanged}`
-        : `${log.quantityChanged}`;
+      let formattedQuantity;
+
+      if (['Sold', 'Borrowed', 'Removed'].includes(log.changeType)) {
+        formattedQuantity = `-${Math.abs(log.quantityChanged)}`;
+      } else {
+        formattedQuantity = `+${Math.abs(log.quantityChanged)}`;
+      }
+
       return {
         ...log,
         quantityChanged: formattedQuantity,
       };
     });
+
     res.json(formattedResults);
   });
 });
+
 
 //records a sale
 app.post('/sales-log', authenticateToken, validateStoreOwnership, (req, res) => {
@@ -593,29 +663,31 @@ app.post('/sales-log', authenticateToken, validateStoreOwnership, (req, res) => 
   });
 });
 
-//get all sales logs from the store
 app.get('/sales-log', authenticateToken, (req, res) => {
   const storeId = req.user.storeId;
   const query = `
-    SELECT 
-      sl.LogID AS id,
-      sl.LogCode AS code,
-      p.ProductName AS productName,
-      sl.ProductID AS productId,
-      sl.CustomerID AS customerId,
-      sl.SaleDate AS date,
-      sl.QuantitySold AS quantitySold,
-      sl.TotalAmount AS totalAmount,
-      sl.PaymentStatus AS paymentStatus,
-      sl.PaymentMethod AS paymentMethod,
-      sl.Note AS note,
-      u.username AS user
-    FROM productsaleslog sl
-    LEFT JOIN users u ON sl.UserID = u.UserID
-    LEFT JOIN Products p ON sl.ProductID = p.ProductID
-    WHERE sl.StoreID = ?
-    ORDER BY sl.SaleDate DESC
-  `;
+  SELECT 
+    sl.LogID AS id,
+    sl.LogCode AS code,
+    p.ProductName AS productName,
+    sl.ProductID AS productId,
+    sl.CustomerID AS customerId,
+    sl.SaleDate AS date,
+    sl.QuantitySold AS quantitySold,
+    sl.TotalAmount AS totalAmount,
+    sl.RemainingAmount AS remainingAmount,
+    sl.PaymentStatus AS paymentStatus,
+    sl.PaymentMethod AS paymentMethod,
+    sl.Note AS note,
+    u.username AS user,
+    COALESCE(c.CustomerName, 'Walk-in') AS customerName
+  FROM productsaleslog sl
+  LEFT JOIN users u ON sl.UserID = u.UserID
+  LEFT JOIN Products p ON sl.ProductID = p.ProductID
+  LEFT JOIN customers c ON sl.CustomerID = c.CustomerID
+  WHERE sl.StoreID = ?
+  ORDER BY sl.SaleDate DESC
+`;
   
   db.query(query, [storeId], (err, results) => {
     if (err) {
@@ -626,8 +698,8 @@ app.get('/sales-log', authenticateToken, (req, res) => {
   });
 });
 
-//records a sale
 app.post('/sales', authenticateToken, validateStoreOwnership, (req, res) => {
+  console.log('[DEBUG] Incoming sale request:', JSON.stringify(req.body, null, 2));
   const { cartItems, paymentMethod, paymentStatus, customer, total } = req.body;
 
   const storeId = req.user.storeId;
@@ -637,23 +709,18 @@ app.post('/sales', authenticateToken, validateStoreOwnership, (req, res) => {
     return res.status(400).json({ error: 'Cart is empty or invalid.' });
   }
 
-  const paymentMethodToInsert =
-    (paymentMethod || '').trim().toLowerCase() === 'cash'
-      ? 'Cash'
-      : (paymentMethod || '').trim().toLowerCase() === 'gcash'
-      ? 'GCash'
-      : '-';
+  const paymentMethodToInsert = (paymentMethod || '').trim().toLowerCase();
+  const method = paymentMethodToInsert === 'cash' ? 'Cash' : paymentMethodToInsert === 'gcash' ? 'GCash' : '-';
 
-  if (paymentStatus === 'borrowed' && paymentMethodToInsert !== '-') {
+  if (paymentStatus === 'borrowed' && method !== '-') {
     return res.status(400).json({ error: 'Borrowed payment must use "-" as method.' });
   }
 
-  if (paymentStatus === 'paid' && !['Cash', 'GCash'].includes(paymentMethodToInsert)) {
+  if (paymentStatus === 'paid' && !['Cash', 'GCash'].includes(method)) {
     return res.status(400).json({ error: 'Paid payment must use "Cash" or "GCash".' });
   }
 
   const connection = db;
-
   connection.beginTransaction((err) => {
     if (err) {
       return res.status(500).json({ error: 'Transaction start failed.', details: err });
@@ -662,116 +729,268 @@ app.post('/sales', authenticateToken, validateStoreOwnership, (req, res) => {
     const salePrefix = 'SLS';
     const stockPrefix = paymentStatus === 'borrowed' ? 'LBRW' : 'LSLD';
 
-    const getLastSaleLogCode = `SELECT LogCode FROM productsaleslog WHERE LogCode LIKE '${salePrefix}%' ORDER BY LogCode DESC LIMIT 1`;
-    const getLastStockLogCode = `SELECT LogCode FROM stocklog WHERE LogCode LIKE '${stockPrefix}%' ORDER BY LogCode DESC LIMIT 1`;
+    const getLastSaleLogCode = `
+      SELECT LogCode 
+      FROM productsaleslog 
+      WHERE StoreID = ? AND LogCode LIKE '${salePrefix}%' 
+      ORDER BY CAST(SUBSTRING(LogCode, 4) AS UNSIGNED) DESC 
+      LIMIT 1
+    `;
 
-    connection.query(getLastSaleLogCode, (err, saleResult) => {
-      if (err) {
-        return connection.rollback(() => res.status(500).json({ error: 'Failed to get last sale log.', details: err }));
-      }
+    const getLastStockLogCode = `
+      SELECT LogCode 
+      FROM stocklog 
+      WHERE StoreID = ? AND LogCode LIKE '${stockPrefix}%' 
+      ORDER BY CAST(SUBSTRING(LogCode, 5) AS UNSIGNED) DESC 
+      LIMIT 1
+    `;
 
-      connection.query(getLastStockLogCode, (err, stockResult) => {
-        if (err) {
-          return connection.rollback(() => res.status(500).json({ error: 'Failed to get last stock log.', details: err }));
-        }
+    connection.query(getLastSaleLogCode, [storeId], (err, saleResult) => {
+      if (err) return connection.rollback(() => res.status(500).json({ error: 'Failed to get last sale log.', details: err }));
+
+      connection.query(getLastStockLogCode, [storeId], (err, stockResult) => {
+        if (err) return connection.rollback(() => res.status(500).json({ error: 'Failed to get last stock log.', details: err }));
 
         let nextSaleNumber = 1;
         if (saleResult.length > 0) {
-          const lastCode = saleResult[0].LogCode;
-          const match = lastCode.match(/^SLS(\d{3})$/);
+          const match = saleResult[0].LogCode.match(/^SLS(\d+)$/);
           if (match) nextSaleNumber = parseInt(match[1]) + 1;
         }
 
         let nextStockNumber = 1;
         if (stockResult.length > 0) {
-          const lastCode = stockResult[0].LogCode;
-          const match = lastCode.match(/^L[A-Z]{3}(\d{3})$/);
+          const match = stockResult[0].LogCode.match(/^L(?:BRW|SLD)(\d+)$/);
           if (match) nextStockNumber = parseInt(match[1]) + 1;
         }
 
         let customerId = null;
 
-        if (paymentStatus === 'borrowed') {
-          if (customer && customer.id) {
-            const updateBalanceQuery = `
-              UPDATE customers SET TotalUnpaid = TotalUnpaid + ? 
-              WHERE CustomerID = ? AND StoreID = ?
-            `;
-            connection.query(updateBalanceQuery, [total, customer.id, storeId], (err, result) => {
-              if (err) {
-                return connection.rollback(() => res.status(500).json({ error: 'Failed to update customer balance.', details: err }));
-              }
-              customerId = customer.id;
-              proceedWithTransaction();
-            });
-          } else {
-            const customerPrefix = 'CSM';
-            const getLastCustomerCodeQuery = `
-              SELECT CustomerCode 
-              FROM customers 
-              WHERE StoreID = ? AND CustomerCode LIKE ? 
-              ORDER BY CustomerCode DESC LIMIT 1
-            `;
+        const handleCustomer = () => {
+          if (paymentStatus === 'borrowed') {
+            if (!customer || !customer.name || customer.name.trim().toLowerCase() === 'walk-in') {
+              return res.status(400).json({ error: 'Cannot borrow under Walk-in. Please select or enter a valid customer.' });
+            }
 
-            connection.query(getLastCustomerCodeQuery, [storeId, `${customerPrefix}%`], (err, result) => {
-              if (err) {
-                return connection.rollback(() => res.status(500).json({ error: 'Failed to fetch customer codes.', details: err }));
-              }
-
-              let nextNumber = 1;
-              if (result.length > 0) {
-                const lastCode = result[0].CustomerCode;
-                const match = lastCode.match(/^CSM(\d{3})$/);
-                if (match) {
-                  nextNumber = parseInt(match[1], 10) + 1;
-                }
-              }
-
-              const newCustomerCode = `CSM${String(nextNumber).padStart(3, '0')}`;
-              const toTitleCase = (str) => str.toLowerCase().split(' ').filter(Boolean).map(word => word[0].toUpperCase() + word.slice(1)).join(' ');
-              const customerNameTitleCase = toTitleCase(customer.name || '');
-
-              const insertCustomerQuery = `
-                INSERT INTO customers (CustomerName, ContactInfo, StoreID, CustomerCode, TotalUnpaid) 
-                VALUES (?, ?, ?, ?, ?)
+            if (customer.id) {
+              const updateBalance = `
+                UPDATE customers 
+                SET TotalUnpaid = TotalUnpaid + ? 
+                WHERE CustomerID = ? AND StoreID = ?
               `;
-
-              connection.query(insertCustomerQuery, [customerNameTitleCase, customer.contact || null, storeId, newCustomerCode, total], (customerErr, customerResult) => {
-                if (customerErr) {
-                  return connection.rollback(() => res.status(500).json({ error: 'Failed to insert customer.', details: customerErr }));
-                }
-                customerId = customerResult.insertId;
+              connection.query(updateBalance, [total, customer.id, storeId], (err) => {
+                if (err) return connection.rollback(() => res.status(500).json({ error: 'Failed to update customer balance.', details: err }));
+                customerId = customer.id;
                 proceedWithTransaction();
               });
-            });
+            } else {
+              const prefix = 'CSM';
+              const fetchLastCustomerCode = `
+                SELECT CustomerCode FROM customers 
+                WHERE StoreID = ? AND CustomerCode LIKE ? 
+                ORDER BY CAST(SUBSTRING(CustomerCode, 4) AS UNSIGNED) DESC LIMIT 1
+              `;
+              connection.query(fetchLastCustomerCode, [storeId, `${prefix}%`], (err, result) => {
+                if (err) return connection.rollback(() => res.status(500).json({ error: 'Failed to fetch customer codes.', details: err }));
+
+                let nextCustomerNumber = 1;
+                if (result.length > 0) {
+                  const match = result[0].CustomerCode.match(/^CSM(\d+)$/);
+                  if (match) nextCustomerNumber = parseInt(match[1]) + 1;
+                }
+
+                const customerCode = `${prefix}${String(nextCustomerNumber).padStart(3, '0')}`;
+                const toTitle = (str) => str.toLowerCase().split(' ').filter(Boolean).map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
+                const name = toTitle(customer.name || '');
+
+                const insertCustomer = `
+                  INSERT INTO customers (CustomerName, ContactInfo, StoreID, CustomerCode, TotalUnpaid) 
+                  VALUES (?, ?, ?, ?, ?)
+                `;
+                connection.query(insertCustomer, [name, customer.contact || null, storeId, customerCode, total], (err, result) => {
+                  if (err) return connection.rollback(() => res.status(500).json({ error: 'Failed to insert customer.', details: err }));
+                  customerId = result.insertId;
+                  proceedWithTransaction();
+                });
+              });
+            }
+          } else {
+            proceedWithTransaction();
           }
-        } else {
-          proceedWithTransaction();
+        };
+
+        const proceedWithTransaction = () => {
+          const tasks = cartItems.map((item, index) => new Promise((resolve, reject) => {
+            const productQuery = 'SELECT * FROM products WHERE ProductID = ? AND StoreID = ?';
+            connection.query(productQuery, [item.id, storeId], (err, results) => {
+              if (err || results.length === 0) return reject(err || `Product ${item.name} not found`);
+
+              const product = results[0];
+              const quantitySold = Number(item.quantity);
+              const newStock = product.QuantityInStock - quantitySold;
+              if (newStock < 0) return reject(`Not enough stock for ${product.ProductName}`);
+
+              const updateStock = 'UPDATE products SET QuantityInStock = ? WHERE ProductID = ?';
+              connection.query(updateStock, [newStock, item.id], (err) => {
+                if (err) return reject(err);
+
+                const stockCode = `${stockPrefix}${String(nextStockNumber + index).padStart(3, '0')}`;
+                const stockLog = `
+                  INSERT INTO stocklog 
+                  (LogCode, ProductID, ProductName, ProductCode, ChangeType, QuantityChanged, StockBefore, StockAfter, Note, StoreID, UserID, CustomerID) 
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `;
+                connection.query(stockLog, [
+                  stockCode,
+                  product.ProductID,
+                  product.ProductName,
+                  product.ProductCode,
+                  paymentStatus === 'borrowed' ? 'Borrowed' : 'Sold',
+                  quantitySold,
+                  product.QuantityInStock,
+                  newStock,
+                  `Stock out ${quantitySold} unit(s)`,
+                  storeId,
+                  userId,
+                  paymentStatus === 'borrowed' ? customerId : null
+                ], (err) => {
+                  if (err) return reject(err);
+
+                  const saleCode = `${salePrefix}${String(nextSaleNumber + index).padStart(3, '0')}`;
+                  const saleLog = `
+                    INSERT INTO productsaleslog 
+                    (LogCode, ProductID, CustomerID, QuantitySold, TotalAmount, RemainingAmount, PaymentStatus, PaymentMethod, Note, StoreID, UserID) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                  `;
+                  const amount = item.price * quantitySold;
+                  connection.query(saleLog, [
+                    saleCode,
+                    item.id,
+                    paymentStatus === 'borrowed' ? customerId : null,
+                    quantitySold,
+                    amount,
+                    paymentStatus === 'borrowed' ? amount : 0,
+                    paymentStatus === 'borrowed' ? 'Borrowed' : 'Paid',
+                    method,
+                    '',
+                    storeId,
+                    userId
+                  ], (err) => {
+                    if (err) return reject(err);
+                    resolve();
+                  });
+                });
+              });
+            });
+          }));
+
+          Promise.all(tasks)
+            .then(() => connection.commit((err) => {
+              if (err) return connection.rollback(() => res.status(500).json({ error: 'Commit failed.', details: err }));
+              res.json({ success: true });
+            }))
+            .catch((err) => {
+              console.error('[ERROR] Transaction failed:', err);
+              connection.rollback(() => res.status(500).json({ error: 'Sale failed. Please try again.', details: err }));
+            });
+        };
+
+        handleCustomer();
+      });
+    });
+  });
+});
+
+app.post('/return', authenticateToken, validateStoreOwnership, (req, res) => {
+  const { returnItems } = req.body;
+
+  if (!Array.isArray(returnItems) || returnItems.length === 0) {
+    return res.status(400).json({ message: 'No return items provided.' });
+  }
+
+  const storeId = req.user.storeId;
+  const userId = req.user.id;
+
+  const connection = db;
+  connection.beginTransaction((err) => {
+    if (err) {
+      return res.status(500).json({ message: 'Transaction start failed.', details: err });
+    }
+
+    const salePrefix = 'SLS';
+    const stockPrefix = 'RTN';
+
+    const getLastSaleLogCode = `SELECT LogCode FROM productsaleslog WHERE LogCode LIKE '${salePrefix}%' ORDER BY LogCode DESC LIMIT 1`;
+    const getLastStockLogCode = `SELECT LogCode FROM stocklog WHERE LogCode LIKE '${stockPrefix}%' ORDER BY LogCode DESC LIMIT 1`;
+
+    connection.query(getLastSaleLogCode, (err, result) => {
+      if (err) {
+        return connection.rollback(() => res.status(500).json({ message: 'Failed to get last sale log code.', details: err }));
+      }
+
+      let nextSaleNumber = 1;
+      if (result.length > 0) {
+        const match = result[0].LogCode.match(/^SLS(\d{3})$/);
+        if (match) {
+          nextSaleNumber = parseInt(match[1], 10) + 1;
+        }
+      }
+
+      connection.query(getLastStockLogCode, (err, stockResult) => {
+        if (err) {
+          return connection.rollback(() => res.status(500).json({ message: 'Failed to get last stock log code.', details: err }));
         }
 
-        function proceedWithTransaction() {
-          const tasks = cartItems.map((item, index) => {
-            return new Promise((resolve, reject) => {
-              const productQuery = 'SELECT * FROM products WHERE ProductID = ? AND StoreID = ?';
-              connection.query(productQuery, [item.id, storeId], (err, results) => {
+        let nextStockNumber = 1;
+        if (stockResult.length > 0) {
+          const match = stockResult[0].LogCode.match(/^RTN(\d{3})$/);
+          if (match) {
+            nextStockNumber = parseInt(match[1], 10) + 1;
+          }
+        }
+
+        const tasks = returnItems.map((item, index) => {
+          return new Promise((resolve, reject) => {
+            const productQuery = 'SELECT * FROM products WHERE ProductID = ? AND StoreID = ?';
+            connection.query(productQuery, [item.id, storeId], (err, results) => {
+              if (err || results.length === 0) {
+                return reject(`Product ${item.id} not found`);
+              }
+
+              const product = results[0];
+              const stockBefore = product.QuantityInStock;
+              const quantityReturned = item.quantity;
+
+              if (quantityReturned <= 0) {
+                return reject(`Invalid quantityReturned for product ${item.id}`);
+              }
+
+              const price = parseFloat(product.SalePrice);
+              if (isNaN(price)) {
+                return reject(`Invalid SalePrice for product ${item.id}`);
+              }
+
+              const totalAmount = price * quantityReturned;
+              const stockAfter = stockBefore + quantityReturned;
+
+              const checkPaidSaleQuery = `
+                SELECT SUM(QuantitySold) AS totalPaidSold
+                FROM productsaleslog
+                WHERE ProductID = ? AND StoreID = ? AND PaymentStatus = 'Paid' AND QuantitySold > 0
+              `;
+              connection.query(checkPaidSaleQuery, [item.id, storeId], (err, salesResults) => {
                 if (err) {
-                  return reject(err);
-                }
-                if (results.length === 0) {
-                  return reject(`Product ${item.name} not found`);
+                  return reject(`Error checking paid sales for product ${item.id}`);
                 }
 
-                const product = results[0];
-                const stockBefore = product.QuantityInStock;
-                const quantitySold = Number(item.quantity);
-                const stockAfter = stockBefore - quantitySold;
-
-                if (stockAfter < 0) return reject(`Not enough stock for ${product.ProductName}`);
+                const totalPaidSold = salesResults[0].totalPaidSold || 0;
+                if (quantityReturned > totalPaidSold) {
+                  return reject(`Cannot return more than sold quantity for product ${item.id}`);
+                }
 
                 const updateStockQuery = 'UPDATE products SET QuantityInStock = ? WHERE ProductID = ?';
                 connection.query(updateStockQuery, [stockAfter, item.id], (err) => {
                   if (err) {
-                    return reject(err);
+                    return reject(`Error updating stock for product ${item.id}`);
                   }
 
                   const insertStockLog = `
@@ -784,37 +1003,37 @@ app.post('/sales', authenticateToken, validateStoreOwnership, (req, res) => {
                     product.ProductID,
                     product.ProductName,
                     product.ProductCode,
-                    paymentStatus === 'borrowed' ? 'Borrowed' : 'Sold',
-                    quantitySold,
+                    'Returned',
+                    quantityReturned,
                     stockBefore,
                     stockAfter,
-                    `Stock out ${quantitySold} unit(s)`,
+                    `Return of ${quantityReturned} unit(s)`,
                     storeId,
-                    userId,
+                    userId
                   ], (err) => {
                     if (err) {
-                      return reject(err);
+                      return reject(`Error inserting stock log for product ${item.id}`);
                     }
 
                     const insertSaleLog = `
-                      INSERT INTO productsaleslog 
-                      (LogCode, ProductID, CustomerID, QuantitySold, TotalAmount, PaymentStatus, PaymentMethod, Note, StoreID, UserID)
+                      INSERT INTO productsaleslog
+                      (LogCode, ProductID, QuantitySold, TotalAmount, RemainingAmount, PaymentStatus, PaymentMethod, Note, StoreID, UserID)
                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     `;
                     connection.query(insertSaleLog, [
                       `${salePrefix}${String(nextSaleNumber + index).padStart(3, '0')}`,
                       item.id,
-                      paymentStatus === 'borrowed' ? customerId : null,
-                      quantitySold,
-                      item.price * quantitySold,
-                      paymentStatus === 'borrowed' ? 'Borrowed' : 'Paid',
-                      paymentMethodToInsert,
+                      -quantityReturned,
+                      totalAmount,
+                      0,
+                      'Returned',
+                      '-',
                       '',
                       storeId,
-                      userId,
+                      userId
                     ], (err) => {
                       if (err) {
-                        return reject(err);
+                        return reject(`Error inserting sale log for product ${item.id}`);
                       }
                       resolve();
                     });
@@ -823,49 +1042,41 @@ app.post('/sales', authenticateToken, validateStoreOwnership, (req, res) => {
               });
             });
           });
+        });
 
-          Promise.all(tasks)
-            .then(() => {
-              connection.commit((err) => {
-                if (err) {
-                  return connection.rollback(() => res.status(500).json({ error: 'Transaction commit failed.', details: err }));
-                }
-                res.json({ success: true });
-              });
-            })
-            .catch((err) => {
-              connection.rollback(() => res.status(500).json({ error: 'Sale failed. Please try again.', details: err }));
+        Promise.all(tasks)
+          .then(() => {
+            connection.commit((err) => {
+              if (err) {
+                return connection.rollback(() => res.status(500).json({ message: 'Transaction commit failed.', details: err }));
+              }
+              res.json({ message: 'Product return processed successfully.' });
             });
-        }
+          })
+          .catch((err) => {
+            connection.rollback(() => res.status(500).json({ message: 'Return failed. Please try again.', details: err }));
+          });
       });
     });
   });
 });
 
-//get customer
 app.get('/customers', authenticateToken, validateStoreOwnership, (req, res) => {
   const storeId = req.user.storeId;
 
   const query = `
     SELECT 
-      c.CustomerID,
-      c.CustomerName,
-      c.ContactInfo,
-      c.CustomerCode,  -- Fetch the actual CustomerCode from the database
-      COALESCE(SUM(
-        CASE 
-          WHEN ps.PaymentStatus = 'Borrowed' THEN ps.TotalAmount
-          ELSE 0
-        END
-      ), 0) AS TotalUnpaid
-    FROM customers c
-    LEFT JOIN productsaleslog ps ON c.CustomerID = ps.CustomerID AND ps.StoreID = ?
-    WHERE c.StoreID = ?
-    GROUP BY c.CustomerID, c.CustomerName, c.ContactInfo, c.CustomerCode  -- Group by the CustomerCode as well
-    ORDER BY c.CustomerName
+      CustomerID,
+      CustomerName,
+      ContactInfo,
+      CustomerCode,
+      COALESCE(TotalUnpaid, 0) AS TotalUnpaid
+    FROM customers
+    WHERE StoreID = ?
+    ORDER BY CustomerName
   `;
 
-  db.query(query, [storeId, storeId], (err, results) => {
+  db.query(query, [storeId], (err, results) => {
     if (err) {
       return res.status(500).json({ error: 'Database error' });
     }
@@ -880,33 +1091,28 @@ app.get('/customers', authenticateToken, validateStoreOwnership, (req, res) => {
 });
 
 app.get('/customers/:customerId/borrowed-products', authenticateToken, validateStoreOwnership, (req, res) => {
-  console.log('Entered /customers/:customerId/borrowed-products route');
   const storeId = req.user.storeId;
   const customerId = req.params.customerId;
-  console.log(`CustomerID: ${customerId}, StoreID: ${storeId}`);
 
   const query = `
     SELECT 
       p.ProductName,
-      ps.QuantitySold,  -- We're selecting QuantitySold
-      ps.TotalAmount
+      ps.QuantitySold,
+      ps.RemainingAmount
     FROM productsaleslog ps
     JOIN products p ON ps.ProductID = p.ProductID
-    WHERE ps.CustomerID = ? AND ps.StoreID = ? AND ps.PaymentStatus = 'Borrowed'
+    WHERE ps.CustomerID = ? AND ps.StoreID = ? AND ps.PaymentStatus IN ('Borrowed', 'Partial')
   `;
 
   db.query(query, [customerId, storeId], (err, results) => {
     if (err) {
-      console.error('Database error:', err);
       return res.status(500).json({ error: 'Database error' });
     }
-    console.log('Database query executed successfully');
-    console.log('Results:', results);
 
     const formattedResults = results.map(product => ({
       name: product.ProductName,
       quantity: product.QuantitySold,
-      totalAmount: parseFloat(product.TotalAmount) || 0
+      remainingAmount: parseFloat(product.RemainingAmount) || 0,
     }));
 
     res.json(formattedResults);
@@ -941,7 +1147,6 @@ app.put('/customers/:id', authenticateToken, validateStoreOwnership, (req, res) 
 
   db.query(query, [updatedName, updatedContact, customerId, storeId], (err, result) => {
     if (err) {
-      console.error('Error updating customer:', err);
       return res.status(500).json({ error: 'Failed to update customer.' });
     }
 
@@ -977,4 +1182,166 @@ app.delete('/customers/:id', authenticateToken, validateStoreOwnership, (req, re
   });
 });
 
-module.exports = app;
+app.post('/settle/:customerId', authenticateToken, validateStoreOwnership, (req, res) => {
+  const customerId = req.params.customerId;
+  const storeId = req.user.storeId;
+  const { amountPaid, paymentMethod } = req.body;
+
+  if (!amountPaid || isNaN(amountPaid) || amountPaid <= 0) {
+    return res.status(400).json({ error: 'Invalid payment amount' });
+  }
+
+  if (!paymentMethod || typeof paymentMethod !== 'string') {
+    return res.status(400).json({ error: 'Invalid payment method' });
+  }
+
+  const getUnpaidQuery = `
+    SELECT LogID, TotalAmount, RemainingAmount, PaymentStatus, ProductID 
+    FROM productsaleslog 
+    WHERE CustomerID = ? AND StoreID = ? AND PaymentStatus IN ('Borrowed', 'Partial')
+    ORDER BY SaleDate ASC
+  `;
+
+  db.query(getUnpaidQuery, [customerId, storeId], (err, sales) => {
+    if (err) return res.status(500).json({ error: 'Failed to fetch sales.' });
+
+    let remaining = amountPaid;
+    const updates = [];
+
+    for (let sale of sales) {
+      if (remaining <= 0) break;
+
+      const toPay = Math.min(sale.RemainingAmount, remaining);
+      remaining -= toPay;
+
+      const newRemaining = sale.RemainingAmount - toPay;
+      const newStatus = newRemaining === 0 ? 'Paid' : 'Partial';
+
+      updates.push([newRemaining, newStatus, paymentMethod, sale.LogID]);
+
+      if (newStatus === 'Paid') {
+        const getStockLogQuery = `
+          SELECT LogID
+          FROM stocklog 
+          WHERE ProductID = ? AND StoreID = ? AND ChangeType = 'Borrowed' AND CustomerID = ?
+        `;
+        db.query(getStockLogQuery, [sale.ProductID, storeId, customerId], (err, stockEntries) => {
+          if (err) return;
+
+          stockEntries.forEach((entry) => {
+            const updateStockLogQuery = `
+              UPDATE stocklog 
+              SET ChangeType = 'Sold' 
+              WHERE LogID = ?
+            `;
+            db.query(updateStockLogQuery, [entry.LogID]);
+          });
+        });
+      }
+    }
+
+    if (updates.length === 0) {
+      return res.json({ success: true, message: 'Nothing to update.', updatedUnpaid: 0 });
+    }
+
+    const updateSalesLogQuery = `
+      UPDATE productsaleslog 
+      SET RemainingAmount = ?, PaymentStatus = ?, PaymentMethod = ?
+      WHERE LogID = ?
+    `;
+
+    const updateSalesPromises = updates.map(([rem, status, method, id]) =>
+      new Promise((resolve, reject) => {
+        db.query(updateSalesLogQuery, [rem, status, method, id], (err) => {
+          if (err) return reject(err);
+          resolve();
+        });
+      })
+    );
+
+    Promise.all(updateSalesPromises)
+      .then(() => {
+        const updateCustomerQuery = `
+          UPDATE customers
+          SET TotalUnpaid = (
+            SELECT COALESCE(SUM(RemainingAmount), 0) 
+            FROM productsaleslog 
+            WHERE CustomerID = ? AND PaymentStatus IN ('Borrowed', 'Partial')
+          )
+          WHERE CustomerID = ?
+        `;
+        db.query(updateCustomerQuery, [customerId, customerId], (err) => {
+          if (err) return res.status(500).json({ error: 'Failed to update customer balance' });
+
+          db.query(`SELECT TotalUnpaid FROM customers WHERE CustomerID = ?`, [customerId], (err, result) => {
+            if (err) return res.status(500).json({ error: 'Failed to fetch updated unpaid' });
+
+            res.json({
+              success: true,
+              message: 'Payment applied and stock updated.',
+              updatedUnpaid: result[0].TotalUnpaid
+            });
+          });
+        });
+      })
+      .catch(err => {
+        res.status(500).json({ error: 'Failed to process settlement.' });
+      });
+  });
+});
+
+const lastEmittedAlerts = {};
+
+app.get('/alerts', authenticateToken, validateStoreOwnership, (req, res) => {
+  const storeId = req.user.storeId;
+
+  const query = `
+    SELECT 
+      ProductID AS id,
+      ProductName,
+      ReorderLevel,
+      QuantityInStock
+    FROM Products
+    WHERE StoreID = ? AND QuantityInStock <= ReorderLevel
+  `;
+
+  db.query(query, [storeId], (err, results) => {
+    if (err) {
+      console.error('Error fetching alerts:', err);
+      return res.status(500).json({ error: 'Failed to fetch alerts' });
+    }
+
+    const formattedResults = results.map(result => {
+      let actionMessage = '';
+
+      if (result.QuantityInStock === 0) {
+        actionMessage = 'Out of stock. Restock now.';
+      } else if (result.QuantityInStock <= result.ReorderLevel / 2) {
+        actionMessage = 'Very low stock. Restock soon.';
+      } else if (result.QuantityInStock <= result.ReorderLevel) {
+        actionMessage = 'Low stock. Consider restocking.';
+      }
+
+      return {
+        id: result.id,
+        productName: result.ProductName,
+        reorderLevel: result.ReorderLevel,
+        currentStock: result.QuantityInStock,
+        action: actionMessage,
+      };
+    });
+
+    console.log('Formatted Results:', formattedResults);
+
+    if (formattedResults.length > 0) {
+      if (!lastEmittedAlerts[storeId] || JSON.stringify(lastEmittedAlerts[storeId]) !== JSON.stringify(formattedResults)) {
+        io.to(`store_${storeId}`).emit('low-inventory-alert', formattedResults);
+        lastEmittedAlerts[storeId] = formattedResults;
+      }
+    }
+
+    res.json(formattedResults);
+  });
+});
+
+module.exports = server;  
