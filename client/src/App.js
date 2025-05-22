@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { io } from 'socket.io-client';
 import './App.css';
 
 import { UserProvider } from './context/user-context';
@@ -7,9 +8,10 @@ import { UserProvider } from './context/user-context';
 import Login from './pages/login/login';
 import Register from './pages/register/register';
 import AdminRegister from './roles/admin/register-admin';
-import CashierRegister from './roles/cashier/register-cashier';
+import OwnerRegister from './roles/owner/register-owner';
 
 import Dashboard from './pages/dashboard/dashboard';
+import Alerts from './pages/alert/alert'
 import Profile from './pages/profile/profile';
 import Sales from './pages/sales/sales';
 import Categories from './pages/category/category';
@@ -27,12 +29,15 @@ import EditCustomer from './components/edit-cust/edit-customer';
 import AddCart from './components/add-cart/add-cart';
 import UpdateStocks from './components/upd-prod/update-product';
 import PayUnpaid from './components/pay-unpaid/pay-unpaid';
+import ProductInfo from './components/prod/prod';
+import Return from './components/return/return';
+import EditProfile from './components/edit-prof/edit-profile';
 
-function Layout({ children }) {
+function Layout({ children, setCartItems, menuUpdated, alertCount }) {
   return (
     <div className="layout menu-open">
       <aside className="sidebar">
-        <Menu isOpen={true} />
+        <Menu key={`menu-${alertCount}`} isOpen={true} setCartItems={setCartItems} menuUpdated={menuUpdated} alertCount={alertCount} />
       </aside>
       <div className="main-area">
         <div className="page-content">{children}</div>
@@ -41,7 +46,8 @@ function Layout({ children }) {
   );
 }
 
-function AppRoutes({ showOverlay, setProductToRestock, cartItems, setCartItems, shouldRefreshProducts, setShouldRefreshProducts }){
+function AppRoutes({ showOverlay, setProductToRestock, cartItems, setCartItems, shouldRefreshProducts, setShouldRefreshProducts, alertCount,
+  userProfile, menuUpdated }){
   const location = useLocation();
   const isAuthRoute = location.pathname === '/login' || location.pathname === '/register';
 
@@ -56,17 +62,18 @@ function AppRoutes({ showOverlay, setProductToRestock, cartItems, setCartItems, 
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/register-admin" element={<AdminRegister />} />
-      <Route path="/register-cashier" element={<CashierRegister />} />
+      <Route path="/register-owner" element={<OwnerRegister />} />
       {!isAuthRoute && (
         <>
-          <Route path="/dashboard" element={isAuthenticated() ? <Layout><Dashboard /></Layout> : <Navigate to="/login" />} />
-          <Route path="/profile" element={isAuthenticated() ? <Layout><Profile /></Layout> : <Navigate to="/login" />} />
-          <Route path="/sales" element={isAuthenticated() ? <Layout><Sales showOverlay={showOverlay} cartItems={cartItems} setCartItems={setCartItems} shouldRefreshProducts={shouldRefreshProducts} setShouldRefreshProducts={setShouldRefreshProducts} /></Layout> : <Navigate to="/login" />} />
-          <Route path="/categories" element={isAuthenticated() ? <Layout><Categories showOverlay={showOverlay} /></Layout> : <Navigate to="/login" />} />
-          <Route path="/products" element={isAuthenticated() ? <Layout><Products showOverlay={showOverlay} setProductToRestock={setProductToRestock} /></Layout> : <Navigate to="/login" />} />
-          <Route path="/sales-logs" element={isAuthenticated() ? <Layout><SalesLog /></Layout> : <Navigate to="/login" />} />
-          <Route path="/stock-logs" element={isAuthenticated() ? <Layout><StockLog /></Layout> : <Navigate to="/login" />} />
-          <Route path="/customers" element={isAuthenticated() ? <Layout><Customer showOverlay={showOverlay} /></Layout> : <Navigate to="/login" />} />
+          <Route path="/dashboard" element={isAuthenticated() ? <Layout setCartItems={setCartItems} menuUpdated={menuUpdated} alertCount={alertCount}><Dashboard /></Layout> : <Navigate to="/login" />} />
+          <Route path="/profile" element={isAuthenticated() ? <Layout setCartItems={setCartItems} menuUpdated={menuUpdated} alertCount={alertCount} ><Profile showOverlay={showOverlay} userProfile={userProfile}/></Layout> : <Navigate to="/login" />} />
+          <Route path="/alerts" element={isAuthenticated() ? <Layout setCartItems={setCartItems} menuUpdated={menuUpdated} alertCount={alertCount}><Alerts /></Layout> : <Navigate to="/login" />} />
+          <Route path="/sales" element={isAuthenticated() ? <Layout setCartItems={setCartItems} menuUpdated={menuUpdated} alertCount={alertCount}><Sales showOverlay={showOverlay} cartItems={cartItems} setCartItems={setCartItems} shouldRefreshProducts={shouldRefreshProducts} setShouldRefreshProducts={setShouldRefreshProducts} /></Layout> : <Navigate to="/login" />} />
+          <Route path="/categories" element={isAuthenticated() ? <Layout setCartItems={setCartItems} menuUpdated={menuUpdated} alertCount={alertCount}><Categories showOverlay={showOverlay} /></Layout> : <Navigate to="/login" />} />
+          <Route path="/products" element={isAuthenticated() ? <Layout setCartItems={setCartItems} menuUpdated={menuUpdated} alertCount={alertCount}><Products showOverlay={showOverlay} setProductToRestock={setProductToRestock} /></Layout> : <Navigate to="/login" />} />
+          <Route path="/sales-logs" element={isAuthenticated() ? <Layout setCartItems={setCartItems} menuUpdated={menuUpdated} alertCount={alertCount}><SalesLog /></Layout> : <Navigate to="/login" />} />
+          <Route path="/stock-logs" element={isAuthenticated() ? <Layout setCartItems={setCartItems} menuUpdated={menuUpdated} alertCount={alertCount}><StockLog /></Layout> : <Navigate to="/login" />} />
+          <Route path="/customers" element={isAuthenticated() ? <Layout setCartItems={setCartItems} menuUpdated={menuUpdated} alertCount={alertCount}><Customer showOverlay={showOverlay} /></Layout> : <Navigate to="/login" />} />
         </>
       )}
     </Routes>
@@ -82,97 +89,101 @@ function App() {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [productToRestock, setProductToRestock] = useState(null);
-  const [showCartOverlay, setShowCartOverlay] = useState(false);
   const [shouldRefreshProducts, setShouldRefreshProducts] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [onCustomerUpdated, setOnCustomerUpdated] = useState(null);
   const [selectedCustomerToPay, setSelectedCustomerToPay] = useState(null);
-  
+  const [menuUpdated, setMenuUpdated] = useState(false);
+  const [viewingProduct, setViewingProduct] = useState(null);
+  const [activeOverlay, setActiveOverlay] = useState(null); 
+
+  const [overlayProps, setOverlayProps] = useState({});
+
   const [cartItems, setCartItems] = useState(() => {
     const saved = localStorage.getItem('cartItems');
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [alertCount, setAlertCount] = useState(0);
+
+  const fetchAlerts = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      const res = await fetch('http://localhost:3004/alerts', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) throw new Error('Failed to fetch alerts');
+      const data = await res.json();
+      setAlertCount(data.length);
+      setMenuUpdated(prev => !prev);
+    } catch (err) {
+      console.error('Error fetching alerts:', err);
+    }
+  };
+
+  useEffect(() => {
+  const socket = io('http://localhost:3004');
+
+  socket.on('low-inventory-alert', (alerts) => {
+    setAlertCount(alerts.length);
+  });
+
+  socket.on('menu-update', () => {
+    setMenuUpdated(prev => !prev);
+  });
+
+  return () => {
+    socket.disconnect();
+  };
+}, []);
+
+  const [onPaymentComplete, setOnPaymentComplete] = useState(null);
+
   useEffect(() => {
     localStorage.setItem('cartItems', JSON.stringify(cartItems));
   }, [cartItems]);
 
-  const showOverlay = (onAddedCallback, type = 'category', category = null, product = null, customer = null) => {
-    if (type === 'category') {
-      setOnCategoryAdded(() => onAddedCallback);
+  const showOverlay = (onAddedCallback, type = 'category', category = null, product = null, customer = null, sale = null, extraProps = {}) => {
+  setActiveOverlay(type);
+  setOverlayProps(extraProps);
+
+      setOnCategoryAdded(null);
       setOnProductAdded(null);
       setOnCategoryUpdated(null);
       setOnProductUpdated(null);
       setSelectedCategory(null);
       setSelectedProduct(null);
       setProductToRestock(null);
-      setShowCartOverlay(false);
-    } else if (type === 'product') {
-      setOnProductAdded(() => onAddedCallback);
-      setOnCategoryAdded(null);
-      setOnCategoryUpdated(null);
-      setOnProductUpdated(null);
-      setSelectedCategory(null);
-      setSelectedProduct(null);
-      setProductToRestock(null);
-      setShowCartOverlay(false);
-    } else if (type === 'edit-category' && category) {
+      setSelectedCustomer(null);
+      setSelectedCustomerToPay(null);
+      setViewingProduct(null);
+      setOnCustomerUpdated(null);
+      setOnPaymentComplete(null);
+    
+    if (type === 'category') setOnCategoryAdded(() => onAddedCallback);
+    else if (type === 'product') setOnProductAdded(() => onAddedCallback);
+    else if (type === 'edit-category' && category) {
       setOnCategoryUpdated(() => onAddedCallback);
       setSelectedCategory(category);
-      setOnCategoryAdded(null);
-      setOnProductAdded(null);
-      setOnProductUpdated(null);
-      setSelectedProduct(null);
-      setProductToRestock(null);
-      setShowCartOverlay(false);
     } else if (type === 'edit-product' && product) {
       setOnProductUpdated(() => onAddedCallback);
       setSelectedProduct(product);
-      setOnProductAdded(null);
-      setOnCategoryAdded(null);
-      setOnCategoryUpdated(null);
-      setProductToRestock(null);
-      setShowCartOverlay(false);
+      setMenuUpdated(prev => !prev);
     } else if (type === 'update-stock' && product) {
       setOnProductUpdated(() => onAddedCallback);
       setProductToRestock(product);
-      setSelectedProduct(null);
-      setSelectedCategory(null);
-      setOnCategoryAdded(null);
-      setOnProductAdded(null);
-      setOnCategoryUpdated(null);
-      setShowCartOverlay(false);
-    } else if (type === 'add-cart') {
-      setShowCartOverlay(true);
-      setOnCategoryAdded(null);
-      setOnProductAdded(null);
-      setOnCategoryUpdated(null);
-      setOnProductUpdated(null);
-      setSelectedCategory(null);
-      setSelectedProduct(null);
-      setProductToRestock(null);
+      setMenuUpdated(prev => !prev);
     } else if (type === 'edit-customer' && customer) {
       setOnCustomerUpdated(() => onAddedCallback);
       setSelectedCustomer(customer);
-      setOnCategoryAdded(null);
-      setOnProductAdded(null);
-      setOnCategoryUpdated(null);
-      setOnProductUpdated(null);
-      setSelectedCategory(null);
-      setSelectedProduct(null);
-      setProductToRestock(null);
-      setShowCartOverlay(false);
     } else if (type === 'pay-unpaid' && customer) {
       setSelectedCustomerToPay(customer);
-      setSelectedCustomer(null);
-      setOnCategoryAdded(null);
-      setOnProductAdded(null);
-      setOnCategoryUpdated(null);
-      setOnProductUpdated(null);
-      setSelectedCategory(null);
-      setSelectedProduct(null);
-      setProductToRestock(null);
-      setShowCartOverlay(false);
+      setOnPaymentComplete(() => onAddedCallback);
+    } else if (type === 'view-product' && product) {
+      setViewingProduct(product);
     }
 
     setIsOverlayVisible(true);
@@ -180,7 +191,9 @@ function App() {
 
   const hideOverlay = () => {
     setIsOverlayVisible(false);
-    setShowCartOverlay(false);
+    setActiveOverlay(null);
+    setMenuUpdated(prev => !prev);
+    fetchAlerts();
   };
 
   const handleCategoryAdded = () => {
@@ -232,65 +245,85 @@ function App() {
           setCartItems={setCartItems}
           shouldRefreshProducts={shouldRefreshProducts}
           setShouldRefreshProducts={setShouldRefreshProducts}
+          alertCount={alertCount}
+          menuUpdated={menuUpdated}
         />
         {isOverlayVisible && (
           <div className="overlay">
-            {showCartOverlay ? (
+            {activeOverlay === 'add-cart' ? (
               <AddCart
                 onClose={() => {
-                  setIsOverlayVisible(false);
-                  setShowCartOverlay(false);
-                  setShouldRefreshProducts(true);
-                }}
+                    if (overlayProps?.onRefresh) overlayProps.onRefresh();
+                    hideOverlay();
+                  }}
                 cartItems={cartItems}
                 setCartItems={setCartItems}
               />
-            ) : onCategoryAdded ? (
+            ) : activeOverlay === 'category' ? (
               <AddCategory
                 onClose={hideOverlay}
                 onAddCategory={handleCategoryAdded}
               />
-            ) : onProductAdded ? (
+            ) : activeOverlay === 'product' ? (
               <AddProduct
                 onClose={hideOverlay}
                 onAddProduct={handleProductAdded}
               />
-            ) : productToRestock ? (
+            ) : activeOverlay === 'update-stock' && productToRestock ? (
               <UpdateStocks
                 initialStock={productToRestock.QuantityInStock}
-                onClose={() => {
-                  setProductToRestock(null);
-                  setIsOverlayVisible(false);
-                }}
-                onSubmit={(newStock) => {
-                  handleProductUpdated(newStock);
-                }}
+                onClose={hideOverlay}
+                onSubmit={handleProductUpdated}
               />
-            ) : selectedCategory ? (
+            ) : activeOverlay === 'edit-category' && selectedCategory ? (
               <EditCategory
                 category={selectedCategory}
                 onClose={hideOverlay}
                 onUpdateCategory={handleCategoryUpdated}
               />
-            ) : selectedProduct ? (
+            ) : activeOverlay === 'edit-product' && selectedProduct ? (
               <EditProduct
                 product={selectedProduct}
                 onClose={hideOverlay}
                 onUpdateProduct={handleProductUpdated}
               />
-            ) : selectedCustomerToPay ? (
+            ) : activeOverlay === 'pay-unpaid' && selectedCustomerToPay ? (
               <PayUnpaid
                 customer={selectedCustomerToPay}
-                onClose={() => {
+                onClose={(customerId, updatedUnpaid) => {
+                  if (onPaymentComplete) onPaymentComplete(customerId, updatedUnpaid);
                   setSelectedCustomerToPay(null);
+                  setOnPaymentComplete(null);
                   setIsOverlayVisible(false);
                 }}
               />
-            ) : selectedCustomer ? (
+            ) : activeOverlay === 'edit-customer' && selectedCustomer ? (
               <EditCustomer
                 customer={selectedCustomer}
                 onClose={hideOverlay}
                 onUpdateCustomer={handleCustomerUpdated}
+              />
+            ) : activeOverlay === 'view-product' && viewingProduct ? (
+              <ProductInfo
+                product={viewingProduct}
+                onClose={hideOverlay}
+              />
+            ) : activeOverlay === 'return' ? (
+              <Return
+                onClose={() => {
+                  if (overlayProps?.onRefresh) overlayProps.onRefresh();
+                  hideOverlay();
+                }}
+                onReturn={() => {
+                  if (onCategoryAdded) onCategoryAdded(); 
+                  hideOverlay();
+                }}
+              />
+             ) : activeOverlay === 'edit-profile' ? (
+              <EditProfile
+                {...overlayProps}
+                onClose={hideOverlay}
+
               />
             ) : null}
           </div>
