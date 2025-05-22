@@ -5,6 +5,7 @@ const cors = require('cors');
 const mysql = require('mysql2');
 const jwt = require('jsonwebtoken');
 const app = express();
+const upload = require('./upload');
 
 app.use(bodyParser.json());
 app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
@@ -302,6 +303,67 @@ app.get('/api/profile', authenticateToken, (req, res) => {
       storeName: user.StoreName || null,
       storeAddress: user.StoreAddress || null,
       storeCode: user.StoreCode || null
+    });
+  });
+});
+
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+app.put('/api/edit-profile', authenticateToken, upload.single('profilePic'), (req, res) => {
+  const { firstName, lastName, username, email, contactNumber, storeName, storeAddress } = req.body;
+  const userId = req.user.id;
+  const storeId = req.user.storeId;
+  const profilePic = req.file ? req.file.filename : null;
+
+  const updateUser = `
+    UPDATE users
+    SET FirstName = ?, LastName = ?, Username = ?, Email = ?, ContactNumber = ?
+        ${profilePic ? ', ProfilePic = ?' : ''}
+    WHERE UserID = ?
+  `;
+
+  const updateStore = `
+    UPDATE store
+    SET StoreName = ?, StoreAddress = ?
+    WHERE StoreID = ?
+  `;
+
+  db.beginTransaction(err => {
+    if (err) return res.status(500).json({ message: 'Transaction failed to start' });
+
+    const userValues = [firstName, lastName, username, email, contactNumber];
+    if (profilePic) userValues.push(profilePic);
+    userValues.push(userId);
+
+    db.query(updateUser, userValues, (err) => {
+      if (err) return db.rollback(() => res.status(500).json({ message: 'Failed to update user' }));
+
+      db.query(updateStore, [storeName, storeAddress, storeId], (err) => {
+        if (err) return db.rollback(() => res.status(500).json({ message: 'Failed to update store' }));
+
+        db.commit(err => {
+          if (err) return db.rollback(() => res.status(500).json({ message: 'Commit failed' }));
+
+          const getUpdatedProfile = `
+            SELECT u.UserID as id, u.FirstName as firstName, u.LastName as lastName,
+                   u.Username as username, u.Email as email, u.ContactNumber as contactNumber,
+                   u.ProfilePic as profilePic, u.Role as role, u.UserCode as userCode,
+                   s.StoreID as storeId, s.StoreName as storeName, s.StoreAddress as storeAddress,
+                   s.StoreCode as storeCode
+            FROM users u
+            JOIN store s ON u.StoreID = s.StoreID
+            WHERE u.UserID = ?
+          `;
+
+          db.query(getUpdatedProfile, [userId], (err, results) => {
+            if (err) return res.status(500).json({ message: 'Error fetching updated profile' });
+
+            const updatedUser = results[0];
+            res.json(updatedUser);
+          });
+        });
+      });
     });
   });
 });
