@@ -30,8 +30,8 @@
   
 .category-button:hover,
 .category-button.active {
-    color: #007bff;
-    border-bottom: 2px solid #007bff;
+    color: #355fb5;
+    border-bottom: 2px solid #355fb5;
 }
 
 .scroll-arrow {
@@ -70,10 +70,16 @@
   border-radius: 4px;
 }
 
-.cart-btn {
+.cart {
+  display: flex;
+  gap: 16px;
+}
+
+.cart-btn,
+.return-btn {
   display: inline-flex;
   justify-content: center;
-  background-color: #31b6b3;
+  align-items: center;
   color: black;
   font-weight: 600;
   font-size: 18px;
@@ -82,8 +88,61 @@
   cursor: pointer;
   transition: background-color 0.4s, box-shadow 0.4s;
 }
+.cart-btn {
+  background-color: #355fb5;
+  color: #ffffff;
+}
 
 .cart-btn:hover {
-  background-color: #128686;
+  background-color: #2d4fa0;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.return-btn {
+  background-color: #ef4444;
+  color: #fff;
+}
+
+.return-btn:hover {
+  background-color: #d33737;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.cart-qty-input {
+  height: 2rem !important;
+  font-size: 16px !important;
+  width: 75px !important;
+  line-height: 1 !important;
+}
+
+.sales{
+  table-layout: fixed;
+}
+
+.sales thead th:nth-child(1) {
+  width: 5% !important;
+  text-align: center;
+}
+
+.sales thead th:nth-child(2) {
+  width: 10%;
+  text-align: center;
+}
+
+.sales thead th:nth-child(3) {
+  width: 40%;
+}
+
+.sales tbody td:nth-child(4),
+.sales thead th:nth-child(4) {
+  text-align: center;
+}
+.sales tbody td:nth-child(5),
+.sales thead th:nth-child(5) {
+  text-align: center;
+}
+
+.sales tbody td:nth-child(6),
+.sales thead th:nth-child(6) {
+  text-align: center;
 }

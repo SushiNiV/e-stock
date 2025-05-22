@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaCartPlus, FaShoppingCart, FaArrowLeft } from 'react-icons/fa';
+import { FaCartPlus, FaShoppingCart, FaBoxOpen } from 'react-icons/fa';
 import './sales.css';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 
@@ -11,11 +11,11 @@ const SortButtons = ({ sortBy, handleSort }) => (
     <button onClick={() => handleSort('category')} className="b-button">
       Sort by Category: {sortBy.key === 'category' ? (sortBy.direction === 'asc' ? 'A-Z' : 'Z-A') : 'A-Z'}
     </button>
-    <button onClick={() => handleSort('price')} className="b-button">
-      Sort by Price: {sortBy.key === 'price' ? (sortBy.direction === 'asc' ? 'Ascending' : 'Descending') : 'Ascending'}
-    </button>
     <button onClick={() => handleSort('stock')} className="b-button">
       Sort by Stock: {sortBy.key === 'stock' ? (sortBy.direction === 'asc' ? 'Low to High' : 'High to Low') : 'Low to High'}
+    </button>
+    <button onClick={() => handleSort('price')} className="b-button">
+      Sort by Price: {sortBy.key === 'price' ? (sortBy.direction === 'asc' ? 'Ascending' : 'Descending') : 'Ascending'}
     </button>
   </div>
 );
@@ -53,35 +53,25 @@ function Sales({ showOverlay, cartItems, setCartItems, shouldRefreshProducts, se
     fetchCategories();
   }, []);
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const res = await fetch('http://localhost:3004/products', {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        });
-        const data = await res.json();
-        const formatted = data.map((item) => {
-          const category = categories.find((cat) => cat.CategoryID === item.CategoryID);
-          return {
-            id: item.ProductID,
-            code: item.ProductCode,
-            name: item.ProductName,
-            categoryId: item.CategoryID,
-            categoryName: category ? category.CategoryName : '',
-            salePrice: Number(item.SalePrice) || 0,
-            stock: item.QuantityInStock ?? 0,
-          };
-        });
-        setProducts(formatted);
-      } catch (error) {
-        console.error('Error fetching products:', error);
-      }
-    };
+useEffect(() => {
+  const fetchProducts = async () => {
+    try {
+      const res = await fetch('http://localhost:3004/products', {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      // processing...
+      setProducts(formatted);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    }
+  };
 
-    if (categories.length) fetchProducts();
-  }, [categories]);
+  if (categories.length && shouldRefreshProducts) {
+    fetchProducts().then(() => setShouldRefreshProducts(false));
+  }
+}, [categories, shouldRefreshProducts, setShouldRefreshProducts]);
 
   const handleSort = (key) => {
     setSortBy((prevState) =>
@@ -133,8 +123,6 @@ function Sales({ showOverlay, cartItems, setCartItems, shouldRefreshProducts, se
       showOverlay(null, 'add-cart');
     }
   };
-
-  const handleReturn = () => {};
 
   const searchValue = (debouncedSearchTerm || '').toLowerCase();
 
@@ -195,7 +183,7 @@ function Sales({ showOverlay, cartItems, setCartItems, shouldRefreshProducts, se
   if (categories.length && shouldRefreshProducts) {
     fetchProducts().then(() => setShouldRefreshProducts(false));
   }
-}, [categories, shouldRefreshProducts]);
+}, [categories, shouldRefreshProducts, setShouldRefreshProducts]);
 
   return (
     <div className="b-page">
@@ -203,7 +191,7 @@ function Sales({ showOverlay, cartItems, setCartItems, shouldRefreshProducts, se
       <div className="b-search-add-container">
         <input
           type="text"
-          placeholder="Search by product, name, or code"
+          placeholder="Search by category, product name, or code"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="b-input"
@@ -238,13 +226,19 @@ function Sales({ showOverlay, cartItems, setCartItems, shouldRefreshProducts, se
 
       <div className="sort-and-cart-container">
         <SortButtons sortBy={sortBy} handleSort={handleSort} />
-        <button onClick={handleViewCart} className="cart-btn">
-          <FaShoppingCart style={{ marginRight: '6px' }} />
-          Cart ({cartItems.length})
-        </button>
+          <div className="cart">
+          <button onClick={() => showOverlay(null, 'return')} className="return-btn">
+            <FaBoxOpen style={{ marginRight: '6px' }} />
+            Return
+          </button>
+          <button onClick={handleViewCart} className="cart-btn">
+            <FaShoppingCart style={{ marginRight: '6px' }} />
+            Cart ({cartItems.length})
+          </button>
+        </div>
       </div>
 
-      <table className="b-table">
+      <table className="b-table sales">
         <thead>
           <tr>
             <th>#</th>
